@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('group_id')->constrained()->cascadeOnDelete();
 
             $table->string('twilio_call_sid')->unique();   // CAxxxxxxxx
+            $table->foreignId('listing_id')->nullable()->constrained()->nullOnDelete();
             $table->string('from_e164');                   // +353...
             $table->string('to_e164');                     // your Twilio number
             $table->string('caller_name')->nullable();     // from Lookup or collected later
