@@ -1,0 +1,25 @@
+import AppLayout from '@/layouts/app-layout';
+import SettingsLayout from '@/layouts/settings/layout';
+import ListingForm, { ListingPayload } from '@/components/listings/ListingForm';
+import { Head } from '@inertiajs/react';
+import { type BreadcrumbItem } from '@/types';
+import * as L from '@/routes/listings';
+import ListingsLayout from '@/layouts/listings/layout';
+
+type PageProps = { listing: ListingPayload & { id: number } };
+
+export default function ListingsEdit({ listing }: PageProps) {
+  const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Listings', href: L.index().url },
+    { title: 'Edit',     href: L.edit(listing.id).url },
+  ];
+
+  return (
+    <AppLayout breadcrumbs={breadcrumbs}>
+      <Head title={`Edit: ${listing.title ?? 'Listing'}`} />
+      <ListingsLayout>
+        <ListingForm action={L.update(listing.id).url} method="put" defaults={listing} submitText="Save" />
+      </ListingsLayout>
+    </AppLayout>
+  );
+}

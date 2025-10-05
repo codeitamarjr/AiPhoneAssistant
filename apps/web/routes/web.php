@@ -1,0 +1,29 @@
+<?php
+
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return Inertia::render('welcome');
+})->name('home');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('dashboard', function () {
+        return Inertia::render('dashboard');
+    })->name('dashboard');
+    Route::get('/onboarding', fn() => Inertia::render('Onboarding/OnboardingWizard'))
+        ->name('onboarding');
+    Route::get('/calls', [\App\Http\Controllers\CallLogWebController::class, 'index'])->name('calls.index');
+
+    Route::get('/listings',               [\App\Http\Controllers\ListingWebController::class, 'index'])->name('listings.index');
+    Route::get('/listings/create',        [\App\Http\Controllers\ListingWebController::class, 'create'])->name('listings.create');
+    Route::post('/listings',              [\App\Http\Controllers\ListingWebController::class, 'store'])->name('listings.store');
+    Route::get('/listings/{listing}/edit', [\App\Http\Controllers\ListingWebController::class, 'edit'])->name('listings.edit');
+    Route::put('/listings/{listing}',     [\App\Http\Controllers\ListingWebController::class, 'update'])->name('listings.update');
+    Route::delete('/listings/{listing}',  [\App\Http\Controllers\ListingWebController::class, 'destroy'])->name('listings.destroy');
+});
+Route::middleware(['auth', 'verified'])->post('/settings/group/switch', [App\Http\Controllers\SwitchGroupController::class, 'store'])
+    ->name('settings.group.switch');
+
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
