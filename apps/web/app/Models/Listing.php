@@ -71,4 +71,8 @@ class Listing extends Model
     {
         return $this->hasMany(\App\Models\ViewingSlot::class);
     }
+    public function phoneNumber()
+    {
+        return $this->hasOne(PhoneNumber::class);
+    }
 }

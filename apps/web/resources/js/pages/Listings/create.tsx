@@ -10,12 +10,18 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Create', href: L.create().url },
 ];
 
-export default function ListingsCreate({ defaults }: { defaults: any }) {
+export default function ListingsCreate({ defaults, phoneNumbers }: { defaults: any; phoneNumbers: any[] }) {
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Create listing" />
       <ListingsLayout>
-        <ListingForm action={L.store().url} method="post" defaults={defaults} submitText="Create" />
+        <ListingForm
+          action={L.store().url}
+          method="post"
+          defaults={defaults}
+          submitText="Create"
+          phoneNumbers={phoneNumbers}
+        />
       </ListingsLayout>
     </AppLayout>
   );

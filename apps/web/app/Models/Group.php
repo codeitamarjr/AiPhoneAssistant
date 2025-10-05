@@ -23,4 +23,8 @@ class Group extends Model
     {
         return $this->hasOne(TwilioCredential::class);
     }
+    public function phoneNumbers()
+    {
+        return $this->hasMany(PhoneNumber::class);
+    }
 }

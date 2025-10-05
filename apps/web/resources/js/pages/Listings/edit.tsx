@@ -6,19 +6,28 @@ import { type BreadcrumbItem } from '@/types';
 import * as L from '@/routes/listings';
 import ListingsLayout from '@/layouts/listings/layout';
 
-type PageProps = { listing: ListingPayload & { id: number } };
+type PageProps = {
+  listing: ListingPayload & { id: number };
+  phoneNumbers: Array<{ id: number; phone_number: string; friendly_name?: string }>;
+};
 
-export default function ListingsEdit({ listing }: PageProps) {
+export default function ListingsEdit({ listing, phoneNumbers }: PageProps) {
   const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Listings', href: L.index().url },
-    { title: 'Edit',     href: L.edit(listing.id).url },
+    { title: 'Edit', href: L.edit(listing.id).url },
   ];
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title={`Edit: ${listing.title ?? 'Listing'}`} />
       <ListingsLayout>
-        <ListingForm action={L.update(listing.id).url} method="put" defaults={listing} submitText="Save" />
+        <ListingForm
+          action={L.update(listing.id).url}
+          method="put"
+          defaults={listing}
+          phoneNumbers={phoneNumbers}
+          submitText="Save"
+        />
       </ListingsLayout>
     </AppLayout>
   );

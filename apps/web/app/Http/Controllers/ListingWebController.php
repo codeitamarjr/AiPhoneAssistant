@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\Group;
 use App\Models\Listing;
+use App\Models\PhoneNumber;
 use Illuminate\Http\Request;
+use App\Services\TwilioNumberSync;
 
 class ListingWebController extends Controller
 {
@@ -15,8 +18,14 @@ class ListingWebController extends Controller
 
         // Whitelist sortable columns to avoid bad input / SQL errors
         $sortable = [
-            'created_at','title','address','eircode',
-            'monthly_rent_eur','available_from','bedrooms','bathrooms',
+            'created_at',
+            'title',
+            'address',
+            'eircode',
+            'monthly_rent_eur',
+            'available_from',
+            'bedrooms',
+            'bathrooms',
         ];
 
         $search = trim((string) $request->get('search', ''));
@@ -31,8 +40,8 @@ class ListingWebController extends Controller
             ->when($search, function ($qq) use ($search) {
                 $qq->where(function ($w) use ($search) {
                     $w->where('title', 'like', "%{$search}%")
-                      ->orWhere('address', 'like', "%{$search}%")
-                      ->orWhere('eircode', 'like', "%{$search}%");
+                        ->orWhere('address', 'like', "%{$search}%")
+                        ->orWhere('eircode', 'like', "%{$search}%");
                 });
             })
             ->orderBy($sort, $order);
@@ -41,19 +50,40 @@ class ListingWebController extends Controller
 
         return Inertia::render('Listings/index', [
             'listings' => $listings,
-            'filters'  => compact('search','sort','order','per'),
+            'filters'  => compact('search', 'sort', 'order', 'per'),
         ]);
     }
 
-    public function create(Request $request)
+    public function create(Request $request, TwilioNumberSync $sync)
     {
+        $user = $request->user();
+        $groupId = method_exists($user, 'currentGroupId') ? $user->currentGroupId() : null;
+
+        $phoneNumbers = PhoneNumber::where('group_id', $groupId)
+            ->where('is_active', true)
+            ->get(['id', 'phone_number', 'friendly_name']);
+
+        if ($phoneNumbers->isEmpty()) {
+            $cred = optional(Group::find($groupId))->twilioCredential;
+            if ($cred && $cred->account_sid && $cred->authToken()) {
+                $sync->syncForGroup($groupId, $user->id, $cred->account_sid, $cred->authToken());
+
+                // 3) Re-load after sync
+                $phoneNumbers = PhoneNumber::where('group_id', $groupId)
+                    ->where('is_active', true)
+                    ->get(['id', 'phone_number', 'friendly_name']);
+            }
+        }
+
         return Inertia::render('Listings/create', [
             'defaults' => [
                 'available_from' => now()->toDateString(),
                 'furnished'      => true,
                 'is_current'     => true,
                 'is_published'   => false,
+                'phone_number_id' => $phoneNumbers->count() === 1 ? (string) $phoneNumbers->first()->id : '',
             ],
+            'phoneNumbers' => $phoneNumbers,
         ]);
     }
 
@@ -66,6 +96,8 @@ class ListingWebController extends Controller
         abort_if(!$gid, 422, 'No active group. Please create or switch to a group.');
 
         $data = $request->validate([
+            'phone_number_id'   => ['nullable', 'exists:phone_numbers,id'],
+
             // Basic
             'title'            => ['required', 'string', 'max:190'],
             'address'          => ['required', 'string', 'max:255'], // made required
@@ -104,7 +136,7 @@ class ListingWebController extends Controller
         ]);
 
         // Accept either JSON string or object
-        foreach (['amenities','policies','extra_info'] as $j) {
+        foreach (['amenities', 'policies', 'extra_info'] as $j) {
             if (isset($data[$j])) {
                 if (is_string($data[$j]) && $data[$j] !== '') {
                     $decoded = json_decode($data[$j], true);
@@ -116,7 +148,7 @@ class ListingWebController extends Controller
         }
 
         // Booleans
-        foreach (['furnished','pets_allowed','smoking_allowed','is_current','is_published'] as $b) {
+        foreach (['furnished', 'pets_allowed', 'smoking_allowed', 'is_current', 'is_published'] as $b) {
             $data[$b] = $request->boolean($b);
         }
 
@@ -126,6 +158,13 @@ class ListingWebController extends Controller
 
         $listing = Listing::create($data);
 
+        // attach number if provided
+        if ($request->filled('phone_number_id')) {
+            \App\Models\PhoneNumber::where('group_id', $gid)
+                ->where('id', $request->input('phone_number_id'))
+                ->update(['listing_id' => $listing->id]);
+        }
+
         return redirect()->route('listings.edit', $listing)->with('success', 'Listing created');
     }
 
@@ -133,27 +172,52 @@ class ListingWebController extends Controller
     {
         $this->authorizeListing($listing);
 
+        $user = auth()->user();
+        $groupId = method_exists($user, 'currentGroupId') ? $user->currentGroupId() : null;
+        $phoneNumbers = PhoneNumber::where('group_id', $groupId)
+            ->where('is_active', true)
+            ->get(['id', 'phone_number', 'friendly_name']);
+
         // Ensure date is formatted for <input type="date">
         $payload = $listing->only([
             'id',
             // Basic
-            'title','address','eircode','summary',
+            'title',
+            'address',
+            'eircode',
+            'summary',
             // Pricing & lease
-            'monthly_rent_eur','deposit_eur','min_lease_months',
+            'monthly_rent_eur',
+            'deposit_eur',
+            'min_lease_months',
             // Property details
-            'bedrooms','bathrooms','floor_area_sqm','floor_number','ber',
+            'bedrooms',
+            'bathrooms',
+            'floor_area_sqm',
+            'floor_number',
+            'ber',
             // Features
-            'furnished','pets_allowed','smoking_allowed','parking','heating',
+            'furnished',
+            'pets_allowed',
+            'smoking_allowed',
+            'parking',
+            'heating',
             // AI/meta
-            'amenities','policies','extra_info',
+            'amenities',
+            'policies',
+            'extra_info',
             // Media & status
-            'main_photo_path','is_current','is_published',
+            'main_photo_path',
+            'is_current',
+            'is_published',
         ]);
 
         $payload['available_from'] = optional($listing->available_from)->format('Y-m-d');
+        $payload['phone_number_id'] = optional($listing->phoneNumber)->id;
 
         return Inertia::render('Listings/edit', [
             'listing' => $payload,
+            'phoneNumbers' => $phoneNumbers,
         ]);
     }
 
@@ -162,6 +226,8 @@ class ListingWebController extends Controller
         $this->authorizeListing($listing);
 
         $data = $request->validate([
+            'phone_number_id'   => ['nullable', 'exists:phone_numbers,id'],
+
             // Basic
             'title'            => ['required', 'string', 'max:190'],
             'address'          => ['required', 'string', 'max:255'], // required to match schema
@@ -199,7 +265,7 @@ class ListingWebController extends Controller
             'is_published'     => ['sometimes', 'boolean'],
         ]);
 
-        foreach (['amenities','policies','extra_info'] as $j) {
+        foreach (['amenities', 'policies', 'extra_info'] as $j) {
             if (isset($data[$j])) {
                 if (is_string($data[$j]) && $data[$j] !== '') {
                     $decoded = json_decode($data[$j], true);
@@ -210,13 +276,29 @@ class ListingWebController extends Controller
             }
         }
 
-        foreach (['furnished','pets_allowed','smoking_allowed','is_current','is_published'] as $b) {
+        foreach (['furnished', 'pets_allowed', 'smoking_allowed', 'is_current', 'is_published'] as $b) {
             if ($request->has($b)) {
                 $data[$b] = $request->boolean($b);
             }
         }
 
-        $listing->update($data);
+        $listing->update(collect($data)->except('phone_number_id')->all());
+
+        // sync phone number assignment
+        $gid = method_exists($request->user(), 'currentGroupId') ? $request->user()->currentGroupId() : null;
+        PhoneNumber::where('group_id', $gid)
+            ->where('listing_id', $listing->id)
+            ->update(['listing_id' => null]);
+
+        if (!empty($data['phone_number_id'])) {
+            $phone = PhoneNumber::where('group_id', $gid)
+                ->where('is_active', true)
+                ->find($data['phone_number_id']);
+            if ($phone) {
+                $phone->listing_id = $listing->id;
+                $phone->save();
+            }
+        }
 
         return back()->with('success', 'Listing updated');
     }

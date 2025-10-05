@@ -6,15 +6,20 @@ import { Label } from '@/components/ui/label';
 import Textarea from '@/components/ui/textarea';
 import { useForm } from '@inertiajs/react';
 import * as React from 'react';
+import { router } from '@inertiajs/react';
+
 
 type ListingFormProps = {
   action: string;
   method?: 'post' | 'put';
   defaults?: Partial<ListingPayload>;
   submitText?: string;
+  phoneNumbers?: Array<{ id: number; phone_number: string; friendly_name?: string }>;
 };
 
 export type ListingPayload = {
+  phone_number_id?: string | null;
+
   // Basic
   title: string;
   address?: string | null;
@@ -57,6 +62,7 @@ export default function ListingForm({
   method = 'post',
   defaults,
   submitText = 'Save',
+  phoneNumbers = [],
 }: ListingFormProps) {
   const TArea =
     (Textarea as any) ??
@@ -73,6 +79,7 @@ export default function ListingForm({
     errors,
   } = useForm<Required<ListingPayload>>({
     // Basic
+    phone_number_id: defaults?.phone_number_id ?? '',
     title: defaults?.title ?? '',
     address: defaults?.address ?? '',
     eircode: defaults?.eircode ?? '',
@@ -139,6 +146,36 @@ export default function ListingForm({
           <h3 className="text-sm font-semibold uppercase text-neutral-600 dark:text-neutral-300">
             Basic Info
           </h3>
+
+          <div className="grid gap-2 md:max-w-md">
+            <Label htmlFor="phone_number_id">Phone Number</Label>
+            <select
+              id="phone_number_id"
+              name="phone_number_id"
+              className="mt-1 block w-full rounded-md border border-neutral-300 px-3 py-2"
+              value={data.phone_number_id ?? ''}
+              onChange={(e) =>
+                setData('phone_number_id' as any, e.target.value === '' ? '' : String(e.target.value))
+              }
+            >
+              <option value="">— Select a number —</option>
+              {phoneNumbers.map((num) => (
+                <option key={num.id} value={String(num.id)}>
+                  {num.friendly_name || num.phone_number}
+                </option>
+              ))}
+            </select>
+            <InputError className="mt-2" message={(errors as any).phone_number_id} />
+          </div>
+
+          {phoneNumbers.length === 0 && (
+            <div className="rounded-md border p-4 text-sm">
+              <div className="mb-2 font-semibold">No phone numbers found</div>
+              <p className="text-neutral-600">
+                Add Twilio credentials to this workspace to sync numbers automatically.
+              </p>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="title">Title *</Label>
@@ -410,8 +447,8 @@ export default function ListingForm({
                 typeof data.amenities === 'string'
                   ? (data.amenities as any)
                   : data.amenities
-                  ? JSON.stringify(data.amenities, null, 2)
-                  : ''
+                    ? JSON.stringify(data.amenities, null, 2)
+                    : ''
               }
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setData('amenities' as any, e.target.value as any)
@@ -431,8 +468,8 @@ export default function ListingForm({
                 typeof data.policies === 'string'
                   ? (data.policies as any)
                   : data.policies
-                  ? JSON.stringify(data.policies, null, 2)
-                  : ''
+                    ? JSON.stringify(data.policies, null, 2)
+                    : ''
               }
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setData('policies' as any, e.target.value as any)
@@ -452,8 +489,8 @@ export default function ListingForm({
                 typeof data.extra_info === 'string'
                   ? (data.extra_info as any)
                   : data.extra_info
-                  ? JSON.stringify(data.extra_info, null, 2)
-                  : ''
+                    ? JSON.stringify(data.extra_info, null, 2)
+                    : ''
               }
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                 setData('extra_info' as any, e.target.value as any)
