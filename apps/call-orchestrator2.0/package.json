@@ -1,19 +1,19 @@
 {
   "name": "call-orchestrator2.0",
   "version": "1.0.1",
+  "private": true,
   "description": "A Fastify-based application for handling calls and interactions with OpenAI API",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js",
-    "server": "node --watch src/index.js",
-    "tunnel": "ngrok http 5050 --log=stdout",
-    "dev": "concurrently -k -s first -n server,ngrok -c blue,magenta \"npm:server\" \"npm:tunnel\""
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "module",
+  "engines": { "node": ">=18.17" },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node --enable-source-maps --loader tsx src/index.ts",
+    "build": "tsc -p .",
+    "tunnel": "ngrok http 5050 --log=stdout",
+    "dev:tunneled": "concurrently -k -s first -n server,ngrok -c blue,magenta \"npm:dev\" \"npm:tunnel\""
+  },
+  "author": "Itamar Junior",
+  "license": "ISC",
   "dependencies": {
     "@fastify/formbody": "^8.0.0",
     "@fastify/websocket": "^11.0.0",
@@ -22,6 +22,9 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "@types/ws": "^8.5.10",
+    "concurrently": "^9.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
   }
 }

@@ -1,8 +1,8 @@
-// src/services/crm.js
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 
-async function post(path, body) {
+// ---- your original crm.js logic, unchanged (TS-compatible) ----
+async function post(path: string, body: any) {
   const url = `${env.WEB_API_BASE_URL}/api${path}`;
   const res = await fetch(url, {
     method: "POST",
@@ -35,7 +35,13 @@ async function post(path, body) {
   return JSON.parse(text);
 }
 
-export function logCallStart(p) {
+export function logCallStart(p: {
+  callSid?: string;
+  from?: string;
+  to?: string;
+  callerName?: string | null;
+  meta?: Record<string, any>;
+}) {
   return post("/calls/start", {
     twilio_call_sid: p.callSid,
     from_e164: p.from,
@@ -47,7 +53,13 @@ export function logCallStart(p) {
   });
 }
 
-export function logCallEnd(p) {
+export function logCallEnd(p: {
+  callSid?: string;
+  status: string;
+  durationSeconds?: number | null;
+  callerName?: string | null;
+  meta?: Record<string, any>;
+}) {
   return post("/calls/end", {
     twilio_call_sid: p.callSid,
     status: p.status,
@@ -58,7 +70,7 @@ export function logCallEnd(p) {
   });
 }
 
-function toArray(maybe) {
+function toArray(maybe?: string | string[] | null) {
   if (!maybe) return [];
   if (Array.isArray(maybe)) return maybe.filter(Boolean);
   return maybe
@@ -67,8 +79,8 @@ function toArray(maybe) {
     .filter(Boolean);
 }
 
-function normalizeListing(api) {
-  const feats = [];
+function normalizeListing(api: any) {
+  const feats: string[] = [];
   if (api.ber) feats.push(`BER ${api.ber}`);
   if (api.furnished != null)
     feats.push(api.furnished ? "Furnished" : "Unfurnished");
@@ -94,10 +106,10 @@ function normalizeListing(api) {
   };
 }
 
-export async function fetchListingByNumber({ to_e164 }) {
-  const url = `${
-    env.WEB_API_BASE_URL
-  }/api/listings/by-number?to_e164=${encodeURIComponent(to_e164)}`;
+export async function fetchListingByNumber({ to_e164 }: { to_e164: string }) {
+  const url = `${env.WEB_API_BASE_URL}/api/listings/by-number?to_e164=${encodeURIComponent(
+    to_e164
+  )}`;
   const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${env.API_TOKEN}`,
