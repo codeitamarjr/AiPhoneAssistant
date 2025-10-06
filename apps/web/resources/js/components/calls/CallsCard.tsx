@@ -148,6 +148,7 @@ export default function CallsCard() {
             {/* Status filter */}
             <select
               value={status}
+              id="call-status"
               onChange={(e) => { setStatus(e.target.value); setPage(1); }}
               className="rounded-lg border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
             >
@@ -163,6 +164,7 @@ export default function CallsCard() {
             {/* Per-page */}
             <select
               value={per}
+              id="call-per"
               onChange={(e) => { const v = Number(e.target.value); setPer(v); fetchCalls({ per: v, page: 1 }); }}
               className="rounded-lg border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
             >
