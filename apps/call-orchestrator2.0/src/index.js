@@ -68,6 +68,15 @@ function sendWhenOpen(ws, fn) {
   }
 }
 
+function escapeXml(s = "") {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 // Root Route
 fastify.get("/", async (request, reply) => {
   reply.send({ message: "Twilio Media Stream Server is running!" });
@@ -93,11 +102,18 @@ fastify.get("/debug/listing", async (req, reply) => {
 fastify.all("/incoming-call", async (request, reply) => {
   const { From, To, CallSid, Caller } = request.body || {};
 
-  // Try to record the call start attach an active listing (non-fatal on error)
+  // Default/fallback greeting (in case CRM lookup fails)
+  let propLabel = "our property";
+  let greeting = `Welcome to ${propLabel}, how can we help you today?`;
+
+  // Try to record the call start and attach listing (non-fatal on error)
   try {
     const listing = To ? await fetchListingByNumber({ to_e164: To }) : null;
 
-    if (CallSid) callContext.set(CallSid, { listing });
+    if (CallSid) callContext.set(CallSid, { listing, preGreeted: true });
+    propLabel = listing?.title || listing?.address || propLabel;
+    greeting = `Welcome to ${propLabel}, how can we help you today?`;
+
     logger.info(
       {
         callSid: CallSid,
@@ -121,11 +137,13 @@ fastify.all("/incoming-call", async (request, reply) => {
 
   const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
                           <Response>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">Please wait while we connect your call to the A. I. voice assistant, powered by Twilio and the Open A I Realtime API</Say>
-                              <Pause length="1"/>
-                              <Say voice="Google.en-US-Chirp3-HD-Aoede">Connecting you now.</Say>
+                              <Say voice="Google.en-US-Chirp3-HD-Aoede">${escapeXml(
+                                greeting
+                              )}</Say>
                               <Connect>
-                                  <Stream url="wss://${request.headers.host}/media-stream" />
+                                  <Stream url="wss://${
+                                    request.headers.host
+                                  }/media-stream" />
                               </Connect>
                           </Response>`;
 
@@ -178,9 +196,6 @@ fastify.register(async (fastify) => {
 
       console.log("Sending session update:", JSON.stringify(sessionUpdate));
       openAiWs.send(JSON.stringify(sessionUpdate));
-
-      // Uncomment the following line to have AI speak first:
-      // sendInitialConversationItem();
     };
 
     // Send initial conversation item if AI talks first
@@ -380,14 +395,13 @@ fastify.register(async (fastify) => {
             responseStartTimestampTwilio = null;
             latestMediaTimestamp = 0;
 
-            if (!greeted) {
-              const ctx = callContext.get(callSid);
+            const ctx = callContext.get(callSid);
+            if (!greeted && !ctx?.preGreeted) {
               const listing = ctx?.listing;
               const propLabel =
                 listing?.title || listing?.address || "our property";
-              const greetText =
-                `Greet the caller warmly. Say exactly: "Welcome to ${propLabel}. ` +
-                `I'm an AI assistant—how can I help you today?"`;
+              const greetText = `Say exactly: "Welcome to ${propLabel}, how can we help you today?"`;
+
               sendWhenOpen(openAiWs, () =>
                 sendInitialConversationItem(greetText)
               );
