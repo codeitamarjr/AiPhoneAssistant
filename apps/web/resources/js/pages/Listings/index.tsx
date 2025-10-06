@@ -32,7 +32,7 @@ type PageProps = {
   filters: {
     search: string;
     sort: string;
-    order: 'asc'|'desc';
+    order: 'asc' | 'desc';
     per: number;
   };
 };
@@ -83,26 +83,28 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
             <table className="w-full text-left text-sm">
               <thead className="bg-neutral-50 text-xs uppercase dark:bg-neutral-800">
                 <tr>
-                  <Th label="Title" onClick={() => toggleSort('title')} active={filters.sort==='title'} order={filters.order} />
+                  <Th label="Title" onClick={() => toggleSort('title')} active={filters.sort === 'title'} order={filters.order} />
                   <th className="px-4 py-2">Address</th>
                   <th className="px-4 py-2">Eircode</th>
-                  <Th label="Rent" onClick={() => toggleSort('rent_eur')} active={filters.sort==='rent_eur'} order={filters.order} />
+                  <Th label="Rent" onClick={() => toggleSort('rent_eur')} active={filters.sort === 'rent_eur'} order={filters.order} />
                   <th className="px-4 py-2">Beds</th>
                   <th className="px-4 py-2">Baths</th>
-                  <Th label="Available" onClick={() => toggleSort('available_from')} active={filters.sort==='available_from'} order={filters.order} />
+                  <Th label="Available" onClick={() => toggleSort('available_from')} active={filters.sort === 'available_from'} order={filters.order} />
                   <th className="px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {listings.data.map((l) => (
                   <tr key={l.id} className="border-t dark:border-neutral-800">
-                    <td className="px-4 py-2 font-medium">{l.title ?? '—'}</td>
+                    <td className="px-4 py-2 font-medium text-nowrap">{l.title ?? '—'}</td>
                     <td className="px-4 py-2">{l.address ?? '—'}</td>
-                    <td className="px-4 py-2">{l.eircode ?? '—'}</td>
-                    <td className="px-4 py-2">{l.rent_eur != null ? `€${l.rent_eur}` : '—'}</td>
+                    <td className="px-4 py-2 text-nowrap">{l.eircode ?? '—'}</td>
+                    <td className="px-4 py-2">{l.monthly_rent_eur != null ? `€${l.monthly_rent_eur}` : '—'}</td>
                     <td className="px-4 py-2">{l.bedrooms ?? '—'}</td>
                     <td className="px-4 py-2">{l.bathrooms ?? '—'}</td>
-                    <td className="px-4 py-2">{l.available_from ?? '—'}</td>
+                    <td className="px-4 py-2">{l.available_from
+                      ? new Date(l.available_from).toLocaleDateString('en-GB')
+                      : '—'}</td>
                     <td className="px-4 py-2 flex items-center gap-2">
                       <Button variant="outline" size="sm" asChild>
                         <Link href={L.edit(l.id).url}>Edit</Link>
@@ -153,13 +155,13 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
   );
 }
 
-function Th({ label, active, order, onClick }: { label: string; active?: boolean; order?: 'asc'|'desc'; onClick: () => void }) {
+function Th({ label, active, order, onClick }: { label: string; active?: boolean; order?: 'asc' | 'desc'; onClick: () => void }) {
   return (
     <th className="cursor-pointer select-none px-4 py-2" onClick={onClick}>
       <div className="flex items-center gap-1">
         {label}
         {active && (
-          <svg className={`h-4 w-4 transition-transform ${order==='asc' ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="currentColor">
+          <svg className={`h-4 w-4 transition-transform ${order === 'asc' ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 7l-7 7h14z" />
           </svg>
         )}
