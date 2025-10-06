@@ -39,7 +39,7 @@ function formatWhen(iso: string | null) {
   if (!iso) return '—';
   try {
     const d = new Date(iso);
-    return d.toLocaleString(); // uses browser locale; swap for Intl.DateTimeFormat if you want forced tz/format
+    return d.toLocaleString('en-GB', { hour12: false });
   } catch {
     return iso;
   }
