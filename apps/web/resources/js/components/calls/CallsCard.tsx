@@ -184,7 +184,7 @@ export default function CallsCard() {
                 <Th label="To"           active={sort==='to'}         order={order} onClick={() => onHeaderClick('to')} />
                 <Th label="Status"       active={sort==='status'}     order={order} onClick={() => onHeaderClick('status')} />
                 <Th label="Duration"     active={sort==='duration_seconds'} order={order} onClick={() => onHeaderClick('duration_seconds')} />
-                <th className="px-6 py-2">SID</th>
+                <th className="px-6 py-2 hidden md:table-cell">SID</th>
               </tr>
             </thead>
             <tbody>
@@ -203,7 +203,7 @@ export default function CallsCard() {
                     </span>
                   </td>
                   <td className="px-6 py-2">{formatDuration(r.duration_seconds)}</td>
-                  <td className="px-6 py-2 text-[11px] text-neutral-500 dark:text-neutral-400">{r.twilio_call_sid}</td>
+                  <td className="px-6 py-2 text-[11px] text-neutral-500 dark:text-neutral-400 hidden md:table-cell">{r.twilio_call_sid}</td>
                 </tr>
               ))}
 
