@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CallLog;
+use App\Models\PhoneNumber;
 use Illuminate\Http\Request;
 
 class CallEventsController extends Controller
@@ -11,7 +12,6 @@ class CallEventsController extends Controller
     public function start(Request $r)
     {
         $data = $r->validate([
-            'group_id'       => ['required', 'exists:groups,id'],
             'twilio_call_sid' => ['required', 'string'],
             'from_e164'      => ['required', 'string'],
             'to_e164'        => ['required', 'string'],
@@ -21,12 +21,28 @@ class CallEventsController extends Controller
             'meta'           => ['nullable', 'array'],
         ]);
 
+        $from = self::normalizeE164($data['from_e164']);
+        $to   = self::normalizeE164($data['to_e164']);
+        $pn = PhoneNumber::query()
+            ->with('listing:id')
+            ->where('phone_number', $to)
+            ->first();
+
+        if (! $pn) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'Unknown destination number',
+                'to_e164' => $to,
+            ], 422);
+        }
+
         $log = CallLog::updateOrCreate(
             ['twilio_call_sid' => $data['twilio_call_sid']],
             [
-                'group_id'   => $data['group_id'],
-                'from_e164'  => $data['from_e164'],
-                'to_e164'    => $data['to_e164'],
+                'group_id'   => $pn->group_id,
+                'listing_id' => $pn->listing_id,
+                'from_e164'  => $from,
+                'to_e164'    => $to,
                 'caller_name' => $data['caller_name'] ?? null,
                 'started_at' => $data['started_at'] ?? now(),
                 'status'     => $data['status'] ?? 'in-progress',
@@ -34,7 +50,12 @@ class CallEventsController extends Controller
             ]
         );
 
-        return response()->json(['ok' => true, 'id' => $log->id]);
+        return response()->json([
+            'ok' => true,
+            'id' => $log->id,
+            'group_id' => $pn->group_id,
+            'listing_id' => $pn->listing_id,
+        ]);
     }
 
     // POST /api/calls/end
@@ -71,5 +92,15 @@ class CallEventsController extends Controller
         $log->save();
 
         return response()->json(['ok' => true]);
+    }
+
+    protected static function normalizeE164(string $s): string
+    {
+        $s = trim($s);
+        if ($s === '') return $s;
+        if ($s[0] === '+') {
+            return '+' . preg_replace('/\D+/', '', substr($s, 1));
+        }
+        return '+' . preg_replace('/\D+/', '', $s);
     }
 }
