@@ -1,0 +1,516 @@
+openapi: 3.0.3
+info:
+  title: AI Phone Assistant API
+  version: "1.0.0"
+  description: |
+    Swagger-style (OpenAPI 3.0) spec generated from the canonical description.
+    **Do not change endpoints** — this spec mirrors the provided routes and semantics.
+servers:
+  - url: https://ai-phoneassistant.test/api
+    description: Base URL
+tags:
+  - name: Sanctum v1
+    description: Endpoints protected by Sanctum session tokens under `/api/v1/*`.
+  - name: Token
+    description: Endpoints protected by custom API token middleware.
+  - name: Utility
+    description: Public or quick-check utility endpoints.
+components:
+  securitySchemes:
+    SanctumAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token for Sanctum-protected routes (`auth:sanctum`).
+    ApiTokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+      description: Bearer token for `api_token` middleware routes (customizable header if needed).
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema: {{ type: integer, minimum: 1 }}
+      description: Page number (pagination)
+    PerParam:
+      name: per
+      in: query
+      schema: {{ type: integer, minimum: 1, maximum: 200 }}
+      description: Items per page
+    SearchParam:
+      name: search
+      in: query
+      schema: {{ type: string }}
+      description: Free-text search
+    StatusParam:
+      name: status
+      in: query
+      schema: {{ type: string }}
+      description: Status filter
+    SortParam:
+      name: sort
+      in: query
+      schema: {{ type: string }}
+      description: Sort field
+    OrderParam:
+      name: order
+      in: query
+      schema: {{ type: string, enum: [asc, desc] }}
+      description: Sort direction
+    GroupIdParam:
+      name: group_id
+      in: query
+      required: true
+      schema: {{ type: integer }}
+      description: Group identifier
+    ToE164Param:
+      name: to_e164
+      in: query
+      required: true
+      schema: {{ type: string }}
+      description: Destination phone in E.164 format (e.g., +353...)
+  responses:
+    ValidationError:
+      description: Laravel validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+          examples:
+            example:
+              value:
+                message: "The given data was invalid."
+                errors:
+                  field_name: ["The field_name field is required."]
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+          examples:
+            example:
+              value:
+                message: "Not found"
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+          examples:
+            example:
+              value:
+                message: "Conflict"
+paths:
+  /v1/groups:
+    post:
+      tags: [Sanctum v1]
+      summary: Create Group
+      description: Creates a new group owned by the authenticated user; body `name` (string ≤120). Success 201 returns full group payload; creator auto-added as owner member.
+      security: [{{ SanctumAuth: [] }}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 120
+            examples:
+              example:
+                value:
+                  name: "My Group"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /v1/onboarding/status:
+    get:
+      tags: [Sanctum v1]
+      summary: Onboarding Status
+      description: Returns onboarding progress for the current user, including booleans `has_group`, `has_twilio`, `next-step` hint, and the first group.
+      security: [{{ SanctumAuth: [] }}]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /v1/groups/{{group}}/twilio:
+    post:
+      tags: [Sanctum v1]
+      summary: Upsert Twilio Credentials
+      description: Upserts encrypted Twilio credentials for the group.
+      security: [{{ SanctumAuth: [] }}]
+      parameters:
+        - name: group
+          in: path
+          required: true
+          schema: {{ type: integer }}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [account_sid, auth_token]
+              properties:
+                account_sid: {{ type: string }}
+                auth_token: {{ type: string }}
+                incoming_phone_e164: {{ type: string, nullable: true }}
+                incoming_phone_sid: {{ type: string, nullable: true }}
+                subaccount_sid: {{ type: string, nullable: true }}
+            examples:
+              example:
+                value:
+                  account_sid: "ACXXXX"
+                  auth_token: "secret"
+                  incoming_phone_e164: "+353861234567"
+                  incoming_phone_sid: "PNXXXX"
+                  subaccount_sid: "ACYYYY"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  saved: {{ type: boolean }}
+                  credential_id: {{ type: integer }}
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /v1/groups/{{group}}/twilio/verify:
+    post:
+      tags: [Sanctum v1]
+      summary: Verify Twilio Connection
+      description: Fetches available incoming numbers and fallback caller IDs via Twilio.
+      security: [{{ SanctumAuth: [] }}]
+      parameters:
+        - name: group
+          in: path
+          required: true
+          schema: {{ type: integer }}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {{ type: boolean }}
+                  incoming:
+                    type: array
+                    items: {{ type: string }}
+                  caller_ids:
+                    type: array
+                    items: {{ type: string }}
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /v1/groups/{{group}}/twilio/attach-number:
+    post:
+      tags: [Sanctum v1]
+      summary: Attach Twilio Number
+      description: Persists selected Twilio number and configures webhooks.
+      security: [{{ SanctumAuth: [] }}]
+      parameters:
+        - name: group
+          in: path
+          required: true
+          schema: {{ type: integer }}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone_sid, phone_e164, voice_webhook]
+              properties:
+                phone_sid: {{ type: string }}
+                phone_e164: {{ type: string }}
+                voice_webhook: {{ type: string }}
+                status_webhook: {{ type: string, nullable: true }}
+            examples:
+              example:
+                value:
+                  phone_sid: "PNXXXX"
+                  phone_e164: "+353861234567"
+                  voice_webhook: "https://yourapp.com/twilio/voice"
+                  status_webhook: "https://yourapp.com/twilio/status"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {{ type: boolean }}
+  /v1/calls:
+    get:
+      tags: [Sanctum v1]
+      summary: List Calls
+      description: Paginated call log for the user’s group.
+      security: [{{ SanctumAuth: [] }}]
+      parameters:
+        - $ref: "#/components/parameters/SearchParam"
+        - $ref: "#/components/parameters/StatusParam"
+        - $ref: "#/components/parameters/SortParam"
+        - $ref: "#/components/parameters/OrderParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  meta:
+                    type: object
+                    additionalProperties: true
+  /v1/listings/active:
+    get:
+      tags: [Sanctum v1]
+      summary: Active Listing for Group
+      description: Requires `group_id`; returns the most recent listing with FAQs and upcoming viewing slots (limit 10) or `null` if none.
+      security: [{{ SanctumAuth: [] }}]
+      parameters:
+        - $ref: "#/components/parameters/GroupIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    additionalProperties: true
+                  - type: "null"
+  /listings/by-number:
+    get:
+      tags: [Token]
+      summary: Listing by Destination Number
+      description: Looks up the listing tied to `to_e164`; returns listing object or 404 with `{message}`.
+      security: [{{ ApiTokenAuth: [] }}]
+      parameters:
+        - $ref: "#/components/parameters/ToE164Param"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /viewing-slots:
+    get:
+      tags: [Token]
+      summary: Future Viewing Slots
+      description: Lists future slots for listings flagged `is_current`; each entry includes related listing.
+      security: [{{ ApiTokenAuth: [] }}]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+  /viewings:
+    post:
+      tags: [Token]
+      summary: Book a Viewing
+      description: Books into a slot; locks slot and increments booked; returns created viewing (201). Responds 409 if slot full.
+      security: [{{ ApiTokenAuth: [] }}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slot_id, name, phone]
+              properties:
+                slot_id: {{ type: integer }}
+                name: {{ type: string }}
+                phone: {{ type: string }}
+                email: {{ type: string, nullable: true }}
+            examples:
+              example:
+                value:
+                  slot_id: 101
+                  name: "Jane Smith"
+                  phone: "+353861112223"
+                  email: "jane@example.com"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /calls/start:
+    post:
+      tags: [Token]
+      summary: Call Start Event
+      description: Server-to-server call start event from orchestrator. Upserts call log and returns `{ok:true,id,group_id,listing_id}`; 422 if destination number unknown.
+      security: [{{ ApiTokenAuth: [] }}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [twilio_call_sid, from_e164, to_e164]
+              properties:
+                twilio_call_sid: {{ type: string }}
+                from_e164: {{ type: string }}
+                to_e164: {{ type: string }}
+                caller_name: {{ type: string, nullable: true }}
+                started_at: {{ type: string, format: date-time, nullable: true }}
+                status: {{ type: string, nullable: true }}
+                meta: {{ type: object, additionalProperties: true, nullable: true }}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {{ type: boolean }}
+                  id: {{ type: integer }}
+                  group_id: {{ type: integer }}
+                  listing_id: {{ type: integer }}
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /calls/end:
+    post:
+      tags: [Token]
+      summary: Call End Event
+      description: Completes a call log; merges metadata and returns `{ok:true}` or 404 if log missing.
+      security: [{{ ApiTokenAuth: [] }}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [twilio_call_sid, status]
+              properties:
+                twilio_call_sid: {{ type: string }}
+                status: {{ type: string }}
+                ended_at: {{ type: string, format: date-time, nullable: true }}
+                duration_seconds: {{ type: integer, nullable: true }}
+                caller_name: {{ type: string, nullable: true }}
+                meta: {{ type: object, additionalProperties: true, nullable: true }}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {{ type: boolean }}
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /leads:
+    post:
+      tags: [Token]
+      summary: Capture Lead
+      description: Captures lead/contact info; creates/updates caller, stores lead, responds `{ok:true,id}`.
+      security: [{{ ApiTokenAuth: [] }}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [group_id, phone_e164]
+              properties:
+                group_id: {{ type: integer }}
+                phone_e164: {{ type: string }}
+                listing_id: {{ type: integer, nullable: true }}
+                call_log_id: {{ type: integer, nullable: true }}
+                name: {{ type: string, nullable: true }}
+                email: {{ type: string, nullable: true }}
+                notes: {{ type: string, nullable: true }}
+                status: {{ type: string, nullable: true }}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {{ type: boolean }}
+                  id: {{ type: integer }}
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /user:
+    get:
+      tags: [Utility]
+      summary: Authenticated User (Sanctum)
+      description: Sanctum-protected quick check returning the authenticated user model.
+      security: [{{ SanctumAuth: [] }}]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /ping:
+    get:
+      tags: [Utility]
+      summary: Health Probe
+      description: Public health probe returning `{{ok:true,time:<ISO 8601>}}`.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {{ type: boolean }}
+                  time: {{ type: string }}
