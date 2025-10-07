@@ -64,12 +64,6 @@ class ListingController extends Controller
         //
     }
 
-    public function current()
-    {
-        $listing = \App\Models\Listing::where('is_current', true)->firstOrFail();
-        return response()->json($listing);
-    }
-
     public function byNumber(Request $request)
     {
         $validated = $request->validate([
@@ -96,10 +90,10 @@ class ListingController extends Controller
             'id'                => $l->id,
             'title'             => $l->title,
             'address'           => $l->address,
-            'eircode'           => $l->eircode,
+            'postcode'           => $l->postcode,
             'summary'           => $l->summary,
-            'monthly_rent_eur'  => $l->monthly_rent_eur,
-            'deposit_eur'       => $l->deposit_eur,
+            'rent'  => $l->rent,
+            'deposit'       => $l->deposit,
             'available_from'    => optional($l->available_from)->toDateString(),
             'min_lease_months'  => $l->min_lease_months,
             'bedrooms'          => $l->bedrooms,

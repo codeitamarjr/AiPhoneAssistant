@@ -41,7 +41,7 @@ export default async function registerMediaWs(fastify: FastifyInstance) {
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY as string;
 
     const openAiWs = new WebSocket(
-      `wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature=${TEMPERATURE}`,
+      `wss://api.openai.com/v1/realtime?model=gpt-audio-mini&temperature=${TEMPERATURE}`,
       { headers: { Authorization: `Bearer ${OPENAI_API_KEY}` } }
     );
 

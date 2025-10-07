@@ -23,12 +23,12 @@ export type ListingPayload = {
   // Basic
   title: string;
   address?: string | null;
-  eircode?: string | null;
+  postcode?: string | null;
   summary?: string | null;
 
   // Pricing & Lease
-  monthly_rent_eur: number | null;
-  deposit_eur?: number | null;
+  rent: number | null;
+  deposit?: number | null;
   available_from?: string | null; // yyyy-mm-dd
   min_lease_months?: number | null;
 
@@ -82,12 +82,12 @@ export default function ListingForm({
     phone_number_id: defaults?.phone_number_id ?? '',
     title: defaults?.title ?? '',
     address: defaults?.address ?? '',
-    eircode: defaults?.eircode ?? '',
+    postcode: defaults?.postcode ?? '',
     summary: defaults?.summary ?? '',
     // Pricing & Lease
-    monthly_rent_eur:
-      (defaults?.monthly_rent_eur as any) ?? ('' as unknown as number), // allow empty
-    deposit_eur: (defaults?.deposit_eur as any) ?? ('' as unknown as number),
+    rent:
+      (defaults?.rent as any) ?? ('' as unknown as number), // allow empty
+    deposit: (defaults?.deposit as any) ?? ('' as unknown as number),
     available_from: defaults?.available_from ?? '',
     min_lease_months:
       (defaults?.min_lease_months as any) ?? (12 as unknown as number),
@@ -203,15 +203,15 @@ export default function ListingForm({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="eircode">Eircode</Label>
+            <Label htmlFor="postcode">postcode</Label>
             <Input
-              id="eircode"
-              name="eircode"
-              value={(data.eircode as any) ?? ''}
-              onChange={onChange('eircode')}
+              id="postcode"
+              name="postcode"
+              value={(data.postcode as any) ?? ''}
+              onChange={onChange('postcode')}
               placeholder="D01 ABC1"
             />
-            <InputError className="mt-2" message={(errors as any).eircode} />
+            <InputError className="mt-2" message={(errors as any).postcode} />
           </div>
 
           <div className="grid gap-2">
@@ -236,29 +236,29 @@ export default function ListingForm({
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="grid gap-2">
-              <Label htmlFor="monthly_rent_eur">Monthly Rent (EUR)</Label>
+              <Label htmlFor="rent">Monthly Rent (EUR)</Label>
               <Input
-                id="monthly_rent_eur"
-                name="monthly_rent_eur"
+                id="rent"
+                name="rent"
                 type="number"
                 min={0}
-                value={(data.monthly_rent_eur as any) ?? ''}
-                onChange={onNumber('monthly_rent_eur')}
+                value={(data.rent as any) ?? ''}
+                onChange={onNumber('rent')}
               />
-              <InputError className="mt-2" message={(errors as any).monthly_rent_eur} />
+              <InputError className="mt-2" message={(errors as any).rent} />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="deposit_eur">Deposit (EUR)</Label>
+              <Label htmlFor="deposit">Deposit (EUR)</Label>
               <Input
-                id="deposit_eur"
-                name="deposit_eur"
+                id="deposit"
+                name="deposit"
                 type="number"
                 min={0}
-                value={(data.deposit_eur as any) ?? ''}
-                onChange={onNumber('deposit_eur')}
+                value={(data.deposit as any) ?? ''}
+                onChange={onNumber('deposit')}
               />
-              <InputError className="mt-2" message={(errors as any).deposit_eur} />
+              <InputError className="mt-2" message={(errors as any).deposit} />
             </div>
 
             <div className="grid gap-2">

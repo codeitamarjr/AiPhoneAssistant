@@ -21,8 +21,8 @@ class ListingWebController extends Controller
             'created_at',
             'title',
             'address',
-            'eircode',
-            'monthly_rent_eur',
+            'postcode',
+            'rent',
             'available_from',
             'bedrooms',
             'bathrooms',
@@ -41,7 +41,7 @@ class ListingWebController extends Controller
                 $qq->where(function ($w) use ($search) {
                     $w->where('title', 'like', "%{$search}%")
                         ->orWhere('address', 'like', "%{$search}%")
-                        ->orWhere('eircode', 'like', "%{$search}%");
+                        ->orWhere('postcode', 'like', "%{$search}%");
                 });
             })
             ->orderBy($sort, $order);
@@ -101,12 +101,12 @@ class ListingWebController extends Controller
             // Basic
             'title'            => ['required', 'string', 'max:190'],
             'address'          => ['required', 'string', 'max:255'], // made required
-            'eircode'          => ['nullable', 'string', 'max:16'],
+            'postcode'          => ['nullable', 'string', 'max:16'],
             'summary'          => ['nullable', 'string'],
 
             // Pricing & lease
-            'monthly_rent_eur' => ['required', 'integer', 'min:0'],
-            'deposit_eur'      => ['nullable', 'integer', 'min:0'],
+            'rent' => ['required', 'integer', 'min:0'],
+            'deposit'      => ['nullable', 'integer', 'min:0'],
             'available_from'   => ['required', 'date'],
             'min_lease_months' => ['nullable', 'integer', 'min:1'],
 
@@ -184,11 +184,11 @@ class ListingWebController extends Controller
             // Basic
             'title',
             'address',
-            'eircode',
+            'postcode',
             'summary',
             // Pricing & lease
-            'monthly_rent_eur',
-            'deposit_eur',
+            'rent',
+            'deposit',
             'min_lease_months',
             // Property details
             'bedrooms',
@@ -231,12 +231,12 @@ class ListingWebController extends Controller
             // Basic
             'title'            => ['required', 'string', 'max:190'],
             'address'          => ['required', 'string', 'max:255'], // required to match schema
-            'eircode'          => ['nullable', 'string', 'max:16'],
+            'postcode'          => ['nullable', 'string', 'max:16'],
             'summary'          => ['nullable', 'string'],
 
             // Pricing & lease
-            'monthly_rent_eur' => ['required', 'integer', 'min:0'],
-            'deposit_eur'      => ['nullable', 'integer', 'min:0'],
+            'rent' => ['required', 'integer', 'min:0'],
+            'deposit'      => ['nullable', 'integer', 'min:0'],
             'available_from'   => ['required', 'date'],
             'min_lease_months' => ['nullable', 'integer', 'min:1'],
 

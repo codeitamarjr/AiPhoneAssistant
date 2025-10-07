@@ -97,7 +97,7 @@ function normalizeListing(api: any) {
     id: api.id,
     title: api.title,
     address: api.address,
-    price: api.monthly_rent_eur ?? null,
+    price: api.rent ?? null,
     beds: api.bedrooms ?? null,
     baths: api.bathrooms ?? null,
     features: feats.slice(0, 12),

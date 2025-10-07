@@ -23,12 +23,12 @@ return new class extends Migration
                 ->cascadeOnDelete();
             $table->string('title');
             $table->string('address');
-            $table->string('eircode')->nullable();
+            $table->string('postcode')->nullable();
             $table->text('summary')->nullable();
 
             // Pricing & Lease
-            $table->integer('monthly_rent_eur');
-            $table->integer('deposit_eur')->nullable();
+            $table->integer('rent');
+            $table->integer('deposit')->nullable();
             $table->date('available_from');
             $table->integer('min_lease_months')->default(12);
 
