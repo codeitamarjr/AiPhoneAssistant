@@ -23,7 +23,7 @@ class ListingApiController extends Controller
             'id' => $listing->id,
             'title' => $listing->title ?? null,
             'address' => $listing->address ?? null,
-            'rent_eur' => $listing->rent_eur ?? null,
+            'rent_eur' => $listing->rent ?? null,
             'available_from' => optional($listing->available_from ?? null)?->toDateString(),
             'bedrooms' => $listing->bedrooms ?? null,
             'bathrooms' => $listing->bathrooms ?? null,

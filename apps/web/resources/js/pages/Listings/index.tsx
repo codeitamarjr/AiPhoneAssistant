@@ -3,6 +3,7 @@ import ListingsLayout from '@/layouts/listings/layout';
 import HeadingSmall from '@/components/heading-small';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Link, Head, useForm } from '@inertiajs/react';
 import * as L from '@/routes/listings';
 import { useEffect, useState } from 'react';
@@ -13,11 +14,14 @@ type Listing = {
   title: string | null;
   address: string | null;
   postcode: string | null;
-  rent_eur: number | null;
+  rent: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
   available_from: string | null; // ISO date
   created_at?: string;
+  inventory_scope: string | null;
+  inventory_summary: string;
+  is_published: boolean;
 };
 
 type PageProps = {
@@ -55,7 +59,7 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
   }, [search]);
 
   const toggleSort = (key: string) => {
-    const order = (filters.sort === key && filters.order === 'asc') ? 'desc' : 'asc';
+    const order = filters.sort === key && filters.order === 'asc' ? 'desc' : 'asc';
     get(L.index().url, { preserveScroll: true, preserveState: true, data: { ...filters, sort: key, order } });
   };
 
@@ -86,10 +90,12 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
                   <Th label="Title" onClick={() => toggleSort('title')} active={filters.sort === 'title'} order={filters.order} />
                   <th className="px-4 py-2">Address</th>
                   <th className="px-4 py-2">postcode</th>
-                  <Th label="Rent" onClick={() => toggleSort('rent_eur')} active={filters.sort === 'rent_eur'} order={filters.order} />
+                  <th className="px-4 py-2">Rent</th>
                   <th className="px-4 py-2">Beds</th>
                   <th className="px-4 py-2">Baths</th>
-                  <Th label="Available" onClick={() => toggleSort('available_from')} active={filters.sort === 'available_from'} order={filters.order} />
+                  <th className="px-4 py-2">Available</th>
+                  <th className="px-4 py-2">Inventory</th>
+                  <Th label="Status" onClick={() => toggleSort('is_published')} active={filters.sort === 'is_published'} order={filters.order} />
                   <th className="px-4 py-2"></th>
                 </tr>
               </thead>
@@ -102,9 +108,18 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
                     <td className="px-4 py-2">{l.rent != null ? `€${l.rent}` : '—'}</td>
                     <td className="px-4 py-2">{l.bedrooms ?? '—'}</td>
                     <td className="px-4 py-2">{l.bathrooms ?? '—'}</td>
-                    <td className="px-4 py-2">{l.available_from
-                      ? new Date(l.available_from).toLocaleDateString('en-GB')
-                      : '—'}</td>
+                    <td className="px-4 py-2">{l.available_from ? new Date(l.available_from).toLocaleDateString('en-GB') : '—'}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">{l.inventory_summary}</span>
+                        <span className="text-xs uppercase text-neutral-500">{l.inventory_scope ?? 'legacy'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <Badge variant={l.is_published ? 'default' : 'secondary'}>
+                        {l.is_published ? 'Published' : 'Draft'}
+                      </Badge>
+                    </td>
                     <td className="px-4 py-2 flex items-center gap-2">
                       <Button variant="outline" size="sm" asChild>
                         <Link href={L.edit(l.id).url}>Edit</Link>

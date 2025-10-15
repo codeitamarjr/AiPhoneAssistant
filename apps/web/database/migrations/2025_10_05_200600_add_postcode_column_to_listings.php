@@ -18,10 +18,10 @@ return new class extends Migration
             });
         }
 
-        if (Schema::hasColumn('listings', 'postcode')) {
+        if (Schema::hasColumn('listings', 'postcoce')) {
             DB::table('listings')
                 ->whereNull('postcode')
-                ->update(['postcode' => DB::raw('postcode')]);
+                ->update(['postcode' => DB::raw('postcoce')]);
         }
     }
 
@@ -30,10 +30,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasColumn('listings', 'postcode')) {
+        if (Schema::hasColumn('listings', 'postcoce')) {
             DB::table('listings')
-                ->whereNull('postcode')
-                ->update(['postcode' => DB::raw('postcode')]);
+                ->whereNull('postcoce')
+                ->update(['postcoce' => DB::raw('postcode')]);
         }
 
         $usingSqlite = Schema::getConnection()->getDriverName() === 'sqlite';

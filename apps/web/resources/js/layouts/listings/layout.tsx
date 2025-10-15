@@ -12,6 +12,21 @@ const sidebarNavItems: NavItem[] = [
         href: '/listings',
         icon: null,
     },
+    {
+        title: 'Buildings',
+        href: '/inventory/buildings',
+        icon: null,
+    },
+    {
+        title: 'Units',
+        href: '/inventory/units',
+        icon: null,
+    },
+    {
+        title: 'Unit Types',
+        href: '/inventory/unit-types',
+        icon: null,
+    },
 ];
 
 export default function ListingsLayout({ children }: PropsWithChildren) {
@@ -25,8 +40,8 @@ export default function ListingsLayout({ children }: PropsWithChildren) {
     return (
         <div className="px-4 py-6">
             <Heading
-                title="Listings"
-                description="Manage your listings and property details"
+                title="Inventory"
+                description="Manage buildings, physical units, and the listings that market them"
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">

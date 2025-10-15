@@ -21,6 +21,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/listings/{listing}/edit', [\App\Http\Controllers\ListingWebController::class, 'edit'])->name('listings.edit');
     Route::put('/listings/{listing}',     [\App\Http\Controllers\ListingWebController::class, 'update'])->name('listings.update');
     Route::delete('/listings/{listing}',  [\App\Http\Controllers\ListingWebController::class, 'destroy'])->name('listings.destroy');
+
+    Route::prefix('inventory')->name('inventory.')->group(function () {
+        Route::resource('buildings', \App\Http\Controllers\BuildingWebController::class)->except(['show']);
+        Route::resource('units', \App\Http\Controllers\UnitWebController::class)->except(['show']);
+        Route::resource('unit-types', \App\Http\Controllers\UnitTypeWebController::class)->except(['show']);
+    });
 });
 Route::middleware(['auth', 'verified'])->post('/settings/group/switch', [App\Http\Controllers\SwitchGroupController::class, 'store'])
     ->name('settings.group.switch');

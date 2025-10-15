@@ -1,5 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
-import ListingForm from '@/components/listings/ListingForm';
+import ListingForm, { type InventoryPayload } from '@/components/listings/ListingForm';
 import { Head } from '@inertiajs/react';
 import { type BreadcrumbItem } from '@/types';
 import * as L from '@/routes/listings';
@@ -10,7 +10,13 @@ const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Create', href: L.create().url },
 ];
 
-export default function ListingsCreate({ defaults, phoneNumbers }: { defaults: any; phoneNumbers: any[] }) {
+type PageProps = {
+  defaults: any;
+  phoneNumbers: Array<{ id: number; phone_number: string; friendly_name?: string }>;
+  inventory: InventoryPayload;
+};
+
+export default function ListingsCreate({ defaults, phoneNumbers, inventory }: PageProps) {
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
       <Head title="Create listing" />
@@ -21,6 +27,7 @@ export default function ListingsCreate({ defaults, phoneNumbers }: { defaults: a
           defaults={defaults}
           submitText="Create"
           phoneNumbers={phoneNumbers}
+          inventory={inventory}
         />
       </ListingsLayout>
     </AppLayout>
