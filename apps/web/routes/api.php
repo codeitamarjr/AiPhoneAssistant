@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/listings/active', [ListingApiController::class, 'active']);
     Route::get('/leads/stats', [LeadApiController::class, 'stats']);
     Route::get('/leads', [LeadApiController::class, 'index']);
+    Route::patch('/leads/{lead}', [LeadApiController::class, 'update']);
 });
 
 // Public/tenant APIs (example) — protect with your API token middleware

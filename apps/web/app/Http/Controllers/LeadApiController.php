@@ -167,4 +167,38 @@ class LeadApiController extends Controller
             ],
         ]);
     }
+
+    public function update(Request $request, Lead $lead)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'status' => ['required', 'in:new,contacted,qualified,waitlist,rejected'],
+        ]);
+
+        $groupId = null;
+        if (method_exists($user, 'currentGroupId')) {
+            $groupId = $user->currentGroupId();
+        } elseif (property_exists($user, 'group_id') && $user->group_id) {
+            $groupId = $user->group_id;
+        }
+
+        if ($groupId && (int) $lead->group_id !== (int) $groupId) {
+            return response()->json(['message' => 'Lead not found'], 404);
+        }
+
+        if ($lead->status !== $data['status']) {
+            $lead->status = $data['status'];
+            $lead->save();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'lead' => [
+                'id'         => $lead->id,
+                'status'     => $lead->status,
+                'updated_at' => optional($lead->updated_at)->toISOString(),
+            ],
+        ]);
+    }
 }

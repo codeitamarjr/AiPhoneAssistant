@@ -54,8 +54,19 @@ type LeadsResponse = {
 
 type SortKey = 'created_at' | 'name' | 'status' | 'source';
 
+type LeadUpdatableStatus = 'new' | 'contacted' | 'qualified' | 'waitlist' | 'rejected';
+
+const leadStatusOptions: Array<{ value: LeadUpdatableStatus; label: string }> = [
+  { value: 'new', label: 'New' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'qualified', label: 'Qualified' },
+  { value: 'waitlist', label: 'Waitlist' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
 const statusBadges: Record<string, string> = {
   new: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+  acknowledged: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-200',
   contacted: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
   qualified: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
   waitlist: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
@@ -96,6 +107,8 @@ export default function LeadsCard() {
   const [meta, setMeta] = useState<LeadsResponse['meta'] | null>(null);
   const searchDebounce = useRef<number | null>(null);
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
+  const [statusDraft, setStatusDraft] = useState<LeadUpdatableStatus>('new');
+  const [statusSaving, setStatusSaving] = useState(false);
 
   const fetchLeads = async (opts?: Partial<{ page: number; per: number }>) => {
     setLoading(true);
@@ -141,6 +154,66 @@ export default function LeadsCard() {
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, per, sort, order, search, status]);
+
+  const normalizeStatusForUI = (value: LeadRow['status']): LeadUpdatableStatus => {
+    if (value === 'acknowledged') return 'new';
+    return value as LeadUpdatableStatus;
+  };
+
+  useEffect(() => {
+    if (selectedLead) {
+      setStatusDraft(normalizeStatusForUI(selectedLead.status));
+      setStatusSaving(false);
+    } else {
+      setStatusSaving(false);
+      setStatusDraft('new');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLead]);
+
+  const handleStatusChange = (nextStatus: LeadUpdatableStatus) => {
+    if (!selectedLead) return;
+
+    const leadId = selectedLead.id;
+    const previousLead = selectedLead;
+    const previousNormalized = normalizeStatusForUI(previousLead.status);
+
+    setStatusDraft(nextStatus);
+
+    if (previousNormalized === nextStatus && previousLead.status !== 'acknowledged') {
+      return;
+    }
+
+    const optimistic: LeadRow = { ...previousLead, status: nextStatus };
+    setStatusSaving(true);
+    setSelectedLead(optimistic);
+    setRows((prev) => prev.map((item) => (item.id === leadId ? { ...item, status: nextStatus } : item)));
+
+    void axios.patch(`/api/v1/leads/${leadId}`, { status: nextStatus })
+      .then(({ data }) => {
+        const backendStatus = (data?.lead?.status ?? nextStatus) as LeadRow['status'];
+        const normalized = normalizeStatusForUI(backendStatus);
+        setSelectedLead((current) =>
+          current && current.id === leadId ? { ...current, status: backendStatus } : current
+        );
+        setRows((prev) =>
+          prev.map((item) => (item.id === leadId ? { ...item, status: backendStatus } : item))
+        );
+        setStatusDraft(normalized);
+      })
+      .catch(() => {
+        setSelectedLead(previousLead);
+        setRows((prev) => prev.map((item) => (item.id === leadId ? previousLead : item)));
+        setStatusDraft(normalizeStatusForUI(previousLead.status));
+      })
+      .finally(() => {
+        setStatusSaving(false);
+      });
+  };
+
+  const openLead = (row: LeadRow) => {
+    setSelectedLead(row);
+  };
 
   const onHeaderClick = (key: SortKey) => {
     if (sort === key) {
@@ -217,7 +290,7 @@ export default function LeadsCard() {
                   <tr
                     key={row.id}
                     className="cursor-pointer border-b border-neutral-200 bg-white transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
-                    onClick={() => setSelectedLead(row)}
+                    onClick={() => openLead(row)}
                   >
                     <td className="whitespace-nowrap px-6 py-2">{formatWhen(row.created_at)}</td>
                     <td className="px-6 py-2">{row.name ?? row.caller?.name ?? '—'}</td>
@@ -296,9 +369,27 @@ export default function LeadsCard() {
                     <dt className="text-neutral-500 dark:text-neutral-400">Email</dt>
                     <dd className="font-medium text-neutral-900 dark:text-neutral-100">{selectedLead.email ?? '—'}</dd>
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <dt className="text-neutral-500 dark:text-neutral-400">Status</dt>
-                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">{titleCase(selectedLead.status)}</dd>
+                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={statusDraft}
+                          onChange={(e) => handleStatusChange(e.target.value as LeadUpdatableStatus)}
+                          disabled={statusSaving}
+                          className="w-full rounded-lg border border-neutral-300 bg-white p-2 text-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:opacity-70 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-primary-400 dark:focus:ring-primary-500/40"
+                        >
+                          {leadStatusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {statusSaving ? 'Saving status…' : 'Pick the current stage for this lead.'}
+                        </p>
+                      </div>
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-neutral-500 dark:text-neutral-400">Source</dt>
