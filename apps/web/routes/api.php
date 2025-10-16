@@ -11,7 +11,8 @@ use App\Http\Controllers\{
     TwilioVerifyController,
     CallLogApiController,
     ListingApiController,
-    LeadEventsController
+    LeadEventsController,
+    LeadApiController
 };
 use App\Http\Controllers\{CallEventsController};
 
@@ -24,6 +25,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/groups/{group}/twilio/attach-number', [TwilioVerifyController::class, 'attachNumber']);
     Route::get('/calls', [CallLogApiController::class, 'index']);
     Route::get('/listings/active', [ListingApiController::class, 'active']);
+    Route::get('/leads', [LeadApiController::class, 'index']);
 });
 
 // Public/tenant APIs (example) — protect with your API token middleware
