@@ -1,27 +1,79 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { toast } from 'sonner';
 
-export default function CreateGroupStep({ onDone }: { onDone: () => void }) {
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import InputError from '@/components/input-error';
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    await axios.post('/api/v1/groups', { name });
-    setSaving(false);
-    onDone();
-  };
+type Props = {
+    onDone: () => void;
+};
 
-  return (
-    <form onSubmit={submit} className="space-y-4 max-w-md">
-      <h2 className="text-xl font-medium">Create your Group</h2>
-      <input className="w-full border rounded px-3 py-2" value={name}
-        onChange={e=>setName(e.target.value)} placeholder="e.g. Real Enquiries Ltd"/>
-      <button className="px-4 py-2 rounded bg-indigo-600 text-white disabled:opacity-50"
-              disabled={!name || saving}>
-        {saving ? 'Creating…' : 'Create Group'}
-      </button>
-    </form>
-  );
+export default function CreateGroupStep({ onDone }: Props) {
+    const [name, setName] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSaving(true);
+        setError(null);
+
+        try {
+            await axios.post('/api/v1/groups', { name });
+            toast.success('Workspace created', {
+                description: `${name} is ready to configure Twilio.`,
+            });
+            onDone();
+        } catch (err) {
+            const message = axios.isAxiosError(err)
+                ? err.response?.data?.message ?? err.message
+                : 'Unable to create workspace right now.';
+            setError(message);
+            toast.error('Workspace could not be created', {
+                description: message,
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Card className="border-sidebar-border/60">
+            <CardHeader>
+                <CardTitle>Name your workspace</CardTitle>
+                <CardDescription>
+                    Start by creating a workspace. This keeps your listings, calls, and team members organised in one place.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={submit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="group_name">Workspace name</Label>
+                        <Input
+                            id="group_name"
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                            placeholder="e.g. Real Enquiries Ltd"
+                            autoFocus
+                            required
+                            minLength={3}
+                        />
+                        <InputError message={error ?? undefined} />
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                        You can invite your teammates once the workspace is created. Choose a name your customers will recognise.
+                    </p>
+
+                    <Button type="submit" disabled={saving || !name.trim()} className="w-full md:w-auto">
+                        {saving ? 'Creating…' : 'Create workspace'}
+                    </Button>
+                </form>
+            </CardContent>
+        </Card>
+    );
 }

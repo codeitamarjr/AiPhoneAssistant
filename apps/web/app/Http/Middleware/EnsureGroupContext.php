@@ -9,6 +9,14 @@ class EnsureGroupContext
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
+        if (! $user) {
+            return $next($request);
+        }
+
+        if ($request->routeIs('onboarding') || $request->routeIs('logout')) {
+            return $next($request);
+        }
+
         $hasGroup = $user->memberships()->exists();
 
         if (! $hasGroup) {
