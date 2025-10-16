@@ -15,6 +15,14 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import type { BreadcrumbItem, SharedData } from '@/types';
 import { show as showTwilio } from '@/routes/twilio';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -57,6 +65,7 @@ export default function TwilioSettings() {
     const [errors, setErrors] = useState<Record<string, string | undefined>>({});
     const [saving, setSaving] = useState(false);
     const [disconnecting, setDisconnecting] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
         setForm(initialForm(credential));
@@ -93,6 +102,7 @@ export default function TwilioSettings() {
                 toast.success('Twilio connection saved');
             }
             setForm((prev) => ({ ...prev, auth_token: '' }));
+            setIsModalOpen(false);
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 422) {
                 const validationErrors = error.response?.data?.errors ?? {};
@@ -188,26 +198,38 @@ export default function TwilioSettings() {
                                         Connect your Twilio account to unlock call routing, caller capture, and automated follow ups.
                                     </p>
                                 )}
+
+                                <div className="flex flex-wrap gap-3">
+                                    <Button type="button" onClick={() => setIsModalOpen(true)}>
+                                        {credential ? 'Edit details' : 'Connect Twilio'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleDisconnect}
+                                        disabled={!credential || disconnecting}
+                                    >
+                                        {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     </section>
 
-                    <section className="space-y-4">
-                        <HeadingSmall
-                            title={credential ? 'Update credentials' : 'Connect Twilio'}
-                            description={
-                                credential
-                                    ? 'Enter your Twilio credentials to rotate tokens, update numbers, or change the connected account.'
-                                    : 'Paste your Twilio Account SID and Auth Token to link your workspace.'
-                            }
-                        />
-
-                        <Card className="border-sidebar-border/60">
-                            <CardContent className="pt-6">
-                                <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="account_sid">Account SID</Label>
-                                        <Input
+                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                        <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                                <DialogTitle>{credential ? 'Update Twilio connection' : 'Connect Twilio'}</DialogTitle>
+                                <DialogDescription>
+                                    {credential
+                                        ? 'Rotate tokens, edit numbers, or switch the connected account.'
+                                        : 'Paste your Twilio Account SID and Auth Token to link your workspace.'}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="account_sid">Account SID</Label>
+                                    <Input
                                             id="account_sid"
                                             name="account_sid"
                                             placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
@@ -268,48 +290,31 @@ export default function TwilioSettings() {
                                             name="subaccount_sid"
                                             placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
                                             value={form.subaccount_sid}
-                                            onChange={handleChange('subaccount_sid')}
-                                        />
-                                        <InputError message={errors.subaccount_sid} />
-                                    </div>
+                                        onChange={handleChange('subaccount_sid')}
+                                    />
+                                    <InputError message={errors.subaccount_sid} />
+                                </div>
 
-                                    <div className="md:col-span-2 flex items-center gap-3">
-                                        <Button type="submit" disabled={saving}>
-                                            {saving ? 'Saving...' : credential ? 'Update connection' : 'Connect Twilio'}
-                                        </Button>
-                                        <p className="text-sm text-muted-foreground">
-                                            Need help? Follow the step-by-step guide in the documentation to locate these values inside Twilio Console.
-                                        </p>
-                                    </div>
-                                </form>
-                            </CardContent>
-                        </Card>
-                    </section>
-
-                    <section className="space-y-4">
-                        <HeadingSmall
-                            title="Danger zone"
-                            description="Disconnecting removes your credentials and stops AI Phone Assistant from handling calls."
-                        />
-                        <Card className="border-destructive/20">
-                            <CardContent className="flex flex-col items-start gap-3 py-6 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                    <p className="font-medium text-foreground">Disconnect Twilio</p>
+                                <div className="md:col-span-2 flex items-center gap-3">
+                                    <Button type="submit" disabled={saving}>
+                                        {saving ? 'Saving...' : credential ? 'Update connection' : 'Connect Twilio'}
+                                    </Button>
                                     <p className="text-sm text-muted-foreground">
-                                        You can reconnect anytime. No phone numbers will be released automatically.
+                                        Need help? Follow the step-by-step guide in the documentation to locate these values inside Twilio Console.
                                     </p>
                                 </div>
+                            </form>
+                            <DialogFooter>
                                 <Button
                                     type="button"
-                                    variant="destructive"
-                                    disabled={!credential || disconnecting}
-                                    onClick={handleDisconnect}
+                                    variant="outline"
+                                    onClick={() => setIsModalOpen(false)}
                                 >
-                                    {disconnecting ? 'Disconnecting...' : 'Disconnect'}
+                                    Close
                                 </Button>
-                            </CardContent>
-                        </Card>
-                    </section>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
 
                     <Separator />
                 </div>
