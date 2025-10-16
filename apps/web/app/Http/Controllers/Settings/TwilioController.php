@@ -21,6 +21,8 @@ class TwilioController extends Controller
         $this->authorize('view', $group);
 
         $credential = optional($group->twilioCredential);
+        $membership = $group->memberships()->where('user_id', $user->id)->first();
+        $canManage = $membership && in_array($membership->role, ['owner', 'admin'], true);
 
         return Inertia::render('settings/twilio', [
             'group' => [
@@ -37,7 +39,7 @@ class TwilioController extends Controller
                 'connected_at' => optional($credential->created_at)->toIso8601String(),
                 'updated_at' => optional($credential->updated_at)->toIso8601String(),
             ] : null,
+            'canManage' => $canManage,
         ]);
     }
 }
-

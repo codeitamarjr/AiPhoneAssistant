@@ -48,6 +48,7 @@ type PageProps = SharedData & {
         name: string;
     };
     credential: Credential | null;
+    canManage: boolean;
 };
 
 const initialForm = (credential?: Credential | null) => ({
@@ -59,7 +60,7 @@ const initialForm = (credential?: Credential | null) => ({
 });
 
 export default function TwilioSettings() {
-    const { group, credential: initialCredential } = usePage<PageProps>().props;
+    const { group, credential: initialCredential, canManage } = usePage<PageProps>().props;
     const [credential, setCredential] = useState<Credential | null>(initialCredential);
     const [form, setForm] = useState(initialForm(initialCredential));
     const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -200,14 +201,14 @@ export default function TwilioSettings() {
                                 )}
 
                                 <div className="flex flex-wrap gap-3">
-                                    <Button type="button" onClick={() => setIsModalOpen(true)}>
+                                    <Button type="button" onClick={() => setIsModalOpen(true)} disabled={!canManage}>
                                         {credential ? 'Edit details' : 'Connect Twilio'}
                                     </Button>
                                     <Button
                                         type="button"
                                         variant="outline"
                                         onClick={handleDisconnect}
-                                        disabled={!credential || disconnecting}
+                                        disabled={!credential || disconnecting || !canManage}
                                     >
                                         {disconnecting ? 'Disconnecting...' : 'Disconnect'}
                                     </Button>
@@ -216,7 +217,7 @@ export default function TwilioSettings() {
                         </Card>
                     </section>
 
-                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <Dialog open={isModalOpen} onOpenChange={(open) => canManage && setIsModalOpen(open)}>
                         <DialogContent className="max-w-3xl">
                             <DialogHeader>
                                 <DialogTitle>{credential ? 'Update Twilio connection' : 'Connect Twilio'}</DialogTitle>
