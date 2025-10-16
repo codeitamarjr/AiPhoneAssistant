@@ -35,6 +35,11 @@ class GroupPolicy
             ->whereIn('role', ['owner', 'admin'])->exists();
     }
 
+    public function invite(User $user, Group $group): bool
+    {
+        return $this->update($user, $group);
+    }
+
     /**
      * Determine whether the user can delete the model.
      */

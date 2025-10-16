@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/leads/stats', [LeadApiController::class, 'stats']);
     Route::get('/leads', [LeadApiController::class, 'index']);
     Route::patch('/leads/{lead}', [LeadApiController::class, 'update']);
+    Route::post('/groups/{group}/invitations', [\App\Http\Controllers\GroupInvitationController::class, 'store']);
 });
 
 // Public/tenant APIs (example) — protect with your API token middleware

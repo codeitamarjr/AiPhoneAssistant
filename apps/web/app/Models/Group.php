@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\GroupInvitation;
 
 class Group extends Model
 {
@@ -18,6 +19,10 @@ class Group extends Model
     public function memberships()
     {
         return $this->hasMany(Membership::class);
+    }
+    public function invitations()
+    {
+        return $this->hasMany(GroupInvitation::class);
     }
     public function twilioCredential()
     {
