@@ -40,6 +40,9 @@ class TeamController extends Controller
             'sent_at' => optional($invitation->created_at)->toIso8601String(),
         ])->values();
 
+        $currentMembership = $group->memberships->firstWhere('user_id', $user->id);
+        $canManage = optional($currentMembership)->role === 'owner';
+
         return Inertia::render('settings/team', [
             'group' => [
                 'id' => $group->id,
@@ -47,6 +50,7 @@ class TeamController extends Controller
             ],
             'members' => $members,
             'invitations' => $invitations,
+            'canManage' => $canManage,
         ]);
     }
 }

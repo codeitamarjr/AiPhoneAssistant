@@ -40,6 +40,11 @@ class GroupPolicy
         return $this->update($user, $group);
     }
 
+    public function removeMember(User $user, Group $group): bool
+    {
+        return (int) $group->owner_id === (int) $user->id;
+    }
+
     /**
      * Determine whether the user can delete the model.
      */

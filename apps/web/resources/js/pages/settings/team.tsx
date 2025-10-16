@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -38,6 +38,7 @@ type PageProps = SharedData & {
     };
     members: TeamMember[];
     invitations: Invitation[];
+    canManage: boolean;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -48,13 +49,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function TeamSettings() {
-    const { group, members, invitations, auth } = usePage<PageProps>().props;
+    const { group, members, invitations, auth, canManage } = usePage<PageProps>().props;
+    const [memberRows, setMemberRows] = useState<TeamMember[]>(members);
     const [pendingInvites, setPendingInvites] = useState<Invitation[]>(invitations);
     const [form, setForm] = useState({ name: '', email: '' });
     const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
     const [submitting, setSubmitting] = useState(false);
 
-    const currentMember = members.find((member) => member.email === auth.user.email);
+    useEffect(() => {
+        setMemberRows(members);
+    }, [members]);
+
+    const currentMember = memberRows.find((member) => member.email === auth.user.email);
     const canInvite = currentMember ? ['owner', 'admin'].includes(currentMember.role) : false;
 
     const handleInvite = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -82,6 +88,29 @@ export default function TeamSettings() {
             }
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleRemoveMember = async (member: TeamMember) => {
+        if (!canManage) return;
+        if (!window.confirm(`Remove ${member.name ?? member.email} from ${group.name}?`)) {
+            return;
+        }
+
+        try {
+            await axios.delete(`/api/v1/groups/${group.id}/memberships/${member.id}`);
+            setMemberRows((prev) => prev.filter((m) => m.id !== member.id));
+            toast.success('Member removed', {
+                description: `${member.email} no longer has access to this workspace.`,
+            });
+        } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 422) {
+                toast.error(error.response.data?.error ?? 'Unable to remove member.');
+            } else {
+                toast.error('Unable to remove member', {
+                    description: 'Please try again in a moment.',
+                });
+            }
         }
     };
 
@@ -165,10 +194,16 @@ export default function TeamSettings() {
                                         <th className="px-4 py-2 font-medium">Name</th>
                                         <th className="px-4 py-2 font-medium">Email</th>
                                         <th className="px-4 py-2 font-medium">Role</th>
+                                        {canManage && <th className="px-4 py-2 font-medium text-right">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {members.map((member) => (
+                                    {memberRows.map((member) => {
+                                        const disableRemove =
+                                            !canManage ||
+                                            member.role === 'owner' ||
+                                            member.email === auth.user.email;
+                                        return (
                                         <tr key={member.id} className="border-t border-sidebar-border/60 bg-background">
                                             <td className="px-4 py-2 font-medium text-foreground">{member.name}</td>
                                             <td className="px-4 py-2 text-muted-foreground">{member.email}</td>
@@ -186,8 +221,22 @@ export default function TeamSettings() {
                                                     {member.role}
                                                 </span>
                                             </td>
+                                            {canManage && (
+                                                <td className="px-4 py-2 text-right">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        disabled={disableRemove}
+                                                        onClick={() => handleRemoveMember(member)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </td>
+                                            )}
                                         </tr>
-                                    ))}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
