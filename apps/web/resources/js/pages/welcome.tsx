@@ -30,15 +30,19 @@ export default function Welcome() {
     return (
         <>
             <Head title="AI Phone Assistant" />
-            <div className="relative min-h-screen overflow-hidden bg-[#f7f9fc] text-neutral-900">
+            <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#fdf6ff] via-[#f5fcff] to-[#fff8f0] text-neutral-900">
                 <div className="pointer-events-none absolute inset-0 -z-20 h-full w-full">
+                    <div className="absolute inset-0 h-full w-full bg-top bg-no-repeat bg-funky-pattern opacity-70" />
                     <div
                         className="absolute inset-0 h-full w-full bg-top bg-no-repeat"
-                        style={{ backgroundImage: `url('${bgImage}')`, backgroundSize: 'cover' }}
+                        style={{ backgroundImage: `url('${bgImage}')`, backgroundSize: 'cover', mixBlendMode: 'screen' }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/50 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/85 via-white/45 to-transparent" />
                 </div>
-                <div className="absolute inset-0 -z-10 h-full w-full animate-[float_14s_ease-in-out_infinite] bg-[radial-gradient(circle_at_20%_20%,rgba(79,182,255,0.35),rgba(255,255,255,0)),radial-gradient(circle_at_80%_30%,rgba(79,255,217,0.25),rgba(255,255,255,0))] opacity-80" />
+                <div className="absolute inset-0 -z-10 h-full w-full animate-pulse-slow bg-[radial-gradient(circle_at_18%_25%,rgba(79,182,255,0.65),rgba(255,255,255,0)),radial-gradient(circle_at_82%_30%,rgba(255,189,255,0.5),rgba(255,255,255,0)),radial-gradient(circle_at_50%_80%,rgba(79,255,217,0.4),rgba(255,255,255,0))] opacity-90" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px] bg-[radial-gradient(55%_65%_at_20%_20%,rgba(93,162,255,0.55),rgba(255,255,255,0)),radial-gradient(60%_50%_at_80%_10%,rgba(255,172,230,0.55),rgba(255,255,255,0))] blur-[60px]" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[360px] bg-[radial-gradient(50%_50%_at_30%_80%,rgba(129,213,255,0.55),rgba(255,255,255,0)),radial-gradient(40%_40%_at_70%_60%,rgba(255,219,180,0.48),rgba(255,255,255,0))] blur-[100px]" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-[420px] bg-[radial-gradient(35%_70%_at_40%_50%,rgba(255,186,223,0.35),rgba(255,255,255,0))] blur-[140px]" />
 
                 {/* Hero content */}
                 <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 md:px-10">
@@ -89,10 +93,14 @@ export default function Welcome() {
                             </div>
                         </div>
                         <div className="relative flex flex-1 items-center justify-center">
-                            <div className="pointer-events-none relative h-64 w-64 overflow-visible md:h-80 md:w-80">
-                                <div className="absolute inset-0 animate-[float_10s_ease-in-out_infinite] rounded-full bg-emerald-400/30 blur-3xl" />
-                                <div className="absolute -inset-6 animate-[float_14s_ease-in-out_infinite] rounded-full bg-sky-200/40 blur-3xl" />
-                                <img src={logoImage} alt="AI Phone Assistant logo" className="relative mx-auto h-full w-full max-w-xs object-contain drop-shadow-[0_25px_55px_rgba(16,185,129,0.25)]" />
+                            <div className="pointer-events-none relative h-64 w-64 overflow-visible animate-float md:h-80 md:w-80">
+                                <div className="absolute inset-0 animate-pulse-slow rounded-full bg-emerald-400/30 blur-3xl" />
+                                <div className="absolute -inset-6 animate-float-delay rounded-full bg-sky-200/40 blur-3xl" />
+                                <img
+                                    src={logoImage}
+                                    alt="AI Phone Assistant logo"
+                                    className="relative mx-auto h-full w-full max-w-xs object-contain drop-shadow-[0_25px_55px_rgba(16,185,129,0.25)]"
+                                />
                             </div>
                         </div>
                     </section>
