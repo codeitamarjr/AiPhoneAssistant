@@ -3,10 +3,79 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lead;
+use App\Models\CallLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LeadApiController extends Controller
 {
+    public function stats(Request $request)
+    {
+        $user = $request->user();
+        $periodStart = now()->startOfMonth();
+        $periodEnd = now();
+
+        $scopedLeads = Lead::query()
+            ->when(method_exists($user, 'currentGroupId'), function ($q) use ($user) {
+                $q->where('group_id', $user->currentGroupId());
+            }, function ($q) use ($user) {
+                if (property_exists($user, 'group_id') && $user->group_id) {
+                    $q->where('group_id', $user->group_id);
+                }
+            })
+            ->where('created_at', '>=', $periodStart);
+
+        $totalLeads = (clone $scopedLeads)->count();
+        $uniqueCallers = (clone $scopedLeads)->distinct('phone_e164')->count('phone_e164');
+        $statusCounts = (clone $scopedLeads)
+            ->select('status', DB::raw('count(*) as aggregate'))
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $scopedCalls = CallLog::query()
+            ->when(method_exists($user, 'currentGroupId'), function ($q) use ($user) {
+                $q->where('group_id', $user->currentGroupId());
+            }, function ($q) use ($user) {
+                if (property_exists($user, 'group_id') && $user->group_id) {
+                    $q->where('group_id', $user->group_id);
+                }
+            })
+            ->where('created_at', '>=', $periodStart);
+
+        $totalCalls = (clone $scopedCalls)->count();
+        $completedCalls = (clone $scopedCalls)->where('status', 'completed')->count();
+
+        $captureRate = $totalCalls > 0 ? round(($totalLeads / $totalCalls) * 100) : null;
+        $leadToCallGap = max($totalCalls - $totalLeads, 0);
+
+        return response()->json([
+            'period' => [
+                'label' => $periodStart->format('F Y'),
+                'start' => $periodStart->toISOString(),
+                'end'   => $periodEnd->toISOString(),
+            ],
+            'leads' => [
+                'total'          => $totalLeads,
+                'unique_callers' => $uniqueCallers,
+                'by_status'      => [
+                    'new'        => (int) ($statusCounts['new'] ?? 0),
+                    'contacted'  => (int) ($statusCounts['contacted'] ?? 0),
+                    'qualified'  => (int) ($statusCounts['qualified'] ?? 0),
+                    'waitlist'   => (int) ($statusCounts['waitlist'] ?? 0),
+                    'rejected'   => (int) ($statusCounts['rejected'] ?? 0),
+                ],
+            ],
+            'calls' => [
+                'total'     => $totalCalls,
+                'completed' => $completedCalls,
+            ],
+            'comparisons' => [
+                'capture_rate_pct' => $captureRate,
+                'call_gap'         => $leadToCallGap,
+            ],
+        ]);
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();

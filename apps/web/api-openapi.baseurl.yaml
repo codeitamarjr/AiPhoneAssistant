@@ -294,6 +294,32 @@ paths:
                   meta:
                     type: object
                     additionalProperties: true
+  /v1/calls/stats:
+    get:
+      tags: [Sanctum v1]
+      summary: Call Stats (Month-to-date)
+      description: Returns month-to-date totals, completions, and minutes handled for the authenticated group.
+      security: [{{ SanctumAuth: [] }}]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: object
+                    properties:
+                      label: {{ type: string }}
+                      start: {{ type: string }}
+                      end: {{ type: string }}
+                  calls:
+                    type: object
+                    properties:
+                      total: {{ type: integer }}
+                      completed: {{ type: integer }}
+                      duration_seconds: {{ type: integer }}
   /v1/listings/active:
     get:
       tags: [Sanctum v1]
@@ -312,6 +338,49 @@ paths:
                   - type: object
                     additionalProperties: true
                   - type: "null"
+  /v1/leads/stats:
+    get:
+      tags: [Sanctum v1]
+      summary: Lead Stats (Month-to-date)
+      description: Returns month-to-date lead totals, status breakdown, and comparisons against call volume.
+      security: [{{ SanctumAuth: [] }}]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: object
+                    properties:
+                      label: {{ type: string }}
+                      start: {{ type: string }}
+                      end: {{ type: string }}
+                  leads:
+                    type: object
+                    properties:
+                      total: {{ type: integer }}
+                      unique_callers: {{ type: integer }}
+                      by_status:
+                        type: object
+                        properties:
+                          new: {{ type: integer }}
+                          contacted: {{ type: integer }}
+                          qualified: {{ type: integer }}
+                          waitlist: {{ type: integer }}
+                          rejected: {{ type: integer }}
+                  calls:
+                    type: object
+                    properties:
+                      total: {{ type: integer }}
+                      completed: {{ type: integer }}
+                  comparisons:
+                    type: object
+                    properties:
+                      capture_rate_pct: {{ type: integer, nullable: true }}
+                      call_gap: {{ type: integer }}
   /listings/by-number:
     get:
       tags: [Token]
@@ -455,7 +524,7 @@ paths:
     post:
       tags: [Token]
       summary: Capture Lead
-      description: Captures lead/contact info; creates/updates caller, stores lead, responds `{ok:true,id}`.
+      description: Captures lead/contact info; creates/updates caller, stores lead, responds `{ok:true,id}`. The group is inferred from the associated call log or listing phone number.
       security: [{{ ApiTokenAuth: [] }}]
       requestBody:
         required: true
@@ -463,9 +532,8 @@ paths:
           application/json:
             schema:
               type: object
-              required: [group_id, phone_e164]
+              required: [phone_e164]
               properties:
-                group_id: {{ type: integer }}
                 phone_e164: {{ type: string }}
                 listing_id: {{ type: integer, nullable: true }}
                 call_log_id: {{ type: integer, nullable: true }}

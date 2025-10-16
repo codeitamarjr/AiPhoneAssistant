@@ -6,6 +6,8 @@ import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import CallsCard from '@/components/calls/CallsCard';
 import LeadsCard from '@/components/leads/LeadsCard';
+import CallStatsWidget from '@/components/dashboard/CallStatsWidget';
+import LeadStatsWidget from '@/components/dashboard/LeadStatsWidget';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -23,12 +25,8 @@ export default function Dashboard() {
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
+                    <CallStatsWidget className="aspect-video" />
+                    <LeadStatsWidget className="aspect-video" />
                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
                         <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
                     </div>
@@ -40,22 +38,20 @@ export default function Dashboard() {
                             <button
                                 type="button"
                                 onClick={() => setActivePanel('calls')}
-                                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                                    activePanel === 'calls'
-                                        ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                                }`}
+                                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${activePanel === 'calls'
+                                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                                    : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                                    }`}
                             >
                                 Calls
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setActivePanel('leads')}
-                                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                                    activePanel === 'leads'
-                                        ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                                }`}
+                                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${activePanel === 'leads'
+                                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                                    : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                                    }`}
                             >
                                 Leads
                             </button>

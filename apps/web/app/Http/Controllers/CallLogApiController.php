@@ -7,6 +7,38 @@ use Illuminate\Http\Request;
 
 class CallLogApiController extends Controller
 {
+    public function stats(Request $request)
+    {
+        $user = $request->user();
+        $periodStart = now()->startOfMonth();
+        $scoped = CallLog::query()
+            ->when(method_exists($user, 'currentGroupId'), function ($qq) use ($user) {
+                $qq->where('group_id', $user->currentGroupId());
+            }, function ($qq) use ($user) {
+                if (property_exists($user, 'group_id') && $user->group_id) {
+                    $qq->where('group_id', $user->group_id);
+                }
+            })
+            ->where('created_at', '>=', $periodStart);
+
+        $totalCalls = (clone $scoped)->count();
+        $completedCalls = (clone $scoped)->where('status', 'completed')->count();
+        $totalDurationSeconds = (int) ((clone $scoped)->sum('duration_seconds') ?? 0);
+
+        return response()->json([
+            'period' => [
+                'label' => $periodStart->format('F Y'),
+                'start' => $periodStart->toISOString(),
+                'end'   => now()->toISOString(),
+            ],
+            'calls' => [
+                'total' => $totalCalls,
+                'completed' => $completedCalls,
+                'duration_seconds' => $totalDurationSeconds,
+            ],
+        ]);
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();

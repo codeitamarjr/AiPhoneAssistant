@@ -23,8 +23,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/groups/{group}/twilio', [TwilioConnectionController::class, 'store']);
     Route::post('/groups/{group}/twilio/verify', [TwilioVerifyController::class, 'verify']);
     Route::post('/groups/{group}/twilio/attach-number', [TwilioVerifyController::class, 'attachNumber']);
+    Route::get('/calls/stats', [CallLogApiController::class, 'stats']);
     Route::get('/calls', [CallLogApiController::class, 'index']);
     Route::get('/listings/active', [ListingApiController::class, 'active']);
+    Route::get('/leads/stats', [LeadApiController::class, 'stats']);
     Route::get('/leads', [LeadApiController::class, 'index']);
 });
 
