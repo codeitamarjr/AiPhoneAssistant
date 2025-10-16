@@ -7,6 +7,7 @@ import { edit as editPassword } from '@/routes/password';
 import { edit } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
 import { show as showTeam } from '@/routes/team';
+import { show as showTwilio } from '@/routes/twilio';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -35,6 +36,11 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Workspace team',
         href: showTeam(),
+        icon: null,
+    },
+    {
+        title: 'Twilio & Calls',
+        href: showTwilio(),
         icon: null,
     },
 ];

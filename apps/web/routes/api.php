@@ -21,6 +21,9 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/groups', [GroupController::class, 'store']);
     Route::get('/onboarding/status', [OnboardingController::class, 'status']);
     Route::post('/groups/{group}/twilio', [TwilioConnectionController::class, 'store']);
+    Route::put('/groups/{group}/twilio', [TwilioConnectionController::class, 'store']);
+    Route::get('/groups/{group}/twilio', [TwilioConnectionController::class, 'show']);
+    Route::delete('/groups/{group}/twilio', [TwilioConnectionController::class, 'destroy']);
     Route::post('/groups/{group}/twilio/verify', [TwilioVerifyController::class, 'verify']);
     Route::post('/groups/{group}/twilio/attach-number', [TwilioVerifyController::class, 'attachNumber']);
     Route::get('/calls/stats', [CallLogApiController::class, 'stats']);

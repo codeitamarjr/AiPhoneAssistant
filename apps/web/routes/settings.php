@@ -3,6 +3,7 @@
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TeamController;
+use App\Http\Controllers\Settings\TwilioController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -28,4 +29,6 @@ Route::middleware('auth')->group(function () {
         ->name('two-factor.show');
 
     Route::get('settings/team', [TeamController::class, 'show'])->name('team.show');
+
+    Route::get('settings/twilio', [TwilioController::class, 'show'])->name('twilio.show');
 });
