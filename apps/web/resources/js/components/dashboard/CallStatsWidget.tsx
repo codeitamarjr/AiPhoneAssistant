@@ -80,7 +80,7 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
                 className,
             )}
         >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-primary-500/5 dark:from-primary-400/15 dark:to-primary-400/10 pointer-events-none" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/8 via-transparent to-blue-500/4 dark:from-blue-400/10 dark:to-blue-400/6" />
             <div className="relative flex flex-col gap-4">
                 <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
