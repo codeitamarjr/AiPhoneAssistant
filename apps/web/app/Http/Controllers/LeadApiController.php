@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lead;
 use App\Models\CallLog;
+use App\Models\Viewing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -80,6 +81,13 @@ class LeadApiController extends Controller
     {
         $user = $request->user();
 
+        $groupId = null;
+        if (method_exists($user, 'currentGroupId')) {
+            $groupId = $user->currentGroupId();
+        } elseif (property_exists($user, 'group_id') && $user->group_id) {
+            $groupId = $user->group_id;
+        }
+
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:new,contacted,qualified,waitlist,rejected'],
@@ -95,13 +103,7 @@ class LeadApiController extends Controller
 
         $query = Lead::query()
             ->with(['caller', 'callLog', 'listing'])
-            ->when(method_exists($user, 'currentGroupId'), function ($q) use ($user) {
-                $q->where('group_id', $user->currentGroupId());
-            }, function ($q) use ($user) {
-                if (property_exists($user, 'group_id') && $user->group_id) {
-                    $q->where('group_id', $user->group_id);
-                }
-            })
+            ->when($groupId, fn($q) => $q->where('group_id', $groupId))
             ->when($validated['status'] ?? null, fn($q, $status) => $q->where('status', $status))
             ->when($validated['search'] ?? null, function ($q, $search) {
                 $q->where(function ($inner) use ($search) {
@@ -123,9 +125,80 @@ class LeadApiController extends Controller
 
         $paginated = $query->paginate($per)->appends($validated);
 
+        $collection = $paginated->getCollection();
+
+        $normalizePhone = static fn(?string $value): string => preg_replace('/\D+/', '', (string) ($value ?? ''));
+
+        $rawPhones = $collection
+            ->pluck('phone_e164')
+            ->filter()
+            ->map(fn($phone) => preg_replace('/\s+/', '', $phone))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $viewings = $rawPhones->isEmpty()
+            ? collect()
+            : Viewing::query()
+                ->with(['slot', 'listing'])
+                ->whereIn('phone', $rawPhones)
+                ->when($groupId, fn($q) => $q->whereHas('listing', fn($listing) => $listing->where('group_id', $groupId)))
+                ->orderByDesc('scheduled_at')
+                ->orderByDesc('created_at')
+                ->get();
+
+        $viewingsByPhoneAndListing = $viewings->groupBy(function (Viewing $viewing) use ($normalizePhone) {
+            return $normalizePhone($viewing->phone) . '|' . (string) ($viewing->listing_id ?? '0');
+        });
+
+        $viewingsByPhone = $viewings->groupBy(function (Viewing $viewing) use ($normalizePhone) {
+            return $normalizePhone($viewing->phone);
+        });
+
         return response()->json([
-            'data' => $paginated->getCollection()->map(function (Lead $lead) {
+            'data' => $collection->map(function (Lead $lead) use ($viewingsByPhoneAndListing, $viewingsByPhone, $normalizePhone) {
                 $callLog = $lead->callLog;
+
+                $normalizedLeadPhone = $normalizePhone($lead->phone_e164);
+                $viewing = null;
+
+                if ($lead->listing_id) {
+                    $byListing = $viewingsByPhoneAndListing->get($normalizedLeadPhone . '|' . (string) $lead->listing_id);
+                    if ($byListing) {
+                        $viewing = $byListing->first();
+                    }
+                }
+
+                if (!$viewing) {
+                    $byPhone = $viewingsByPhone->get($normalizedLeadPhone);
+                    if ($byPhone) {
+                        $viewing = $byPhone->first();
+                    }
+                }
+
+                $viewingData = null;
+                if ($viewing) {
+                    $viewingData = [
+                        'id' => $viewing->id,
+                        'name' => $viewing->name,
+                        'phone' => $viewing->phone,
+                        'email' => $viewing->email,
+                        'scheduled_at' => optional($viewing->scheduled_at)->toISOString(),
+                        'created_at' => optional($viewing->created_at)->toISOString(),
+                        'listing' => $viewing->listing ? [
+                            'id' => $viewing->listing->id,
+                            'title' => $viewing->listing->title,
+                            'address' => $viewing->listing->address,
+                        ] : null,
+                        'slot' => $viewing->slot ? [
+                            'id' => $viewing->slot->id,
+                            'start_at' => optional(optional($viewing->slot)->start_at)->toISOString(),
+                            'mode' => $viewing->slot->mode,
+                            'interval_minutes' => $viewing->slot->slot_interval_minutes,
+                        ] : null,
+                    ];
+                }
+
                 return [
                     'id'          => $lead->id,
                     'name'        => $lead->name,
@@ -155,6 +228,7 @@ class LeadApiController extends Controller
                         'to'               => $callLog->to_e164,
                         'twilio_call_sid'  => $callLog->twilio_call_sid,
                     ] : null,
+                    'viewing'     => $viewingData,
                 ];
             }),
             'meta' => [

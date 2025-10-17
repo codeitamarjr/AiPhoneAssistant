@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import clsx from 'clsx';
+import { Calendar } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+
+type ViewingSummary = {
+  id: number;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  scheduled_at: string | null;
+  created_at: string | null;
+  listing: {
+    id: number;
+    title: string | null;
+    address: string | null;
+  } | null;
+  slot: {
+    id: number;
+    start_at: string | null;
+    mode: string | null;
+    interval_minutes: number | null;
+  } | null;
+};
 
 type LeadRow = {
   id: number;
@@ -38,6 +59,7 @@ type LeadRow = {
     to: string;
     twilio_call_sid: string;
   } | null;
+  viewing: ViewingSummary | null;
 };
 
 type LeadsResponse = {
@@ -95,6 +117,20 @@ function titleCase(value: string | null | undefined) {
   return value.replace(/[_-]/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
+function formatViewingTime(viewing: ViewingSummary | null) {
+  if (!viewing) return '—';
+  if (viewing.scheduled_at) return formatWhen(viewing.scheduled_at);
+  if (viewing.slot?.start_at) return formatWhen(viewing.slot.start_at);
+  return '—';
+}
+
+function formatViewingLocation(viewing: ViewingSummary | null) {
+  if (!viewing || !viewing.listing) return '—';
+  const { title, address } = viewing.listing;
+  if (title && address) return `${title} — ${address}`;
+  return title ?? address ?? '—';
+}
+
 export default function LeadsCard() {
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [page, setPage] = useState(1);
@@ -109,6 +145,7 @@ export default function LeadsCard() {
   const [selectedLead, setSelectedLead] = useState<LeadRow | null>(null);
   const [statusDraft, setStatusDraft] = useState<LeadUpdatableStatus>('new');
   const [statusSaving, setStatusSaving] = useState(false);
+  const [viewingModal, setViewingModal] = useState<ViewingSummary | null>(null);
 
   const fetchLeads = async (opts?: Partial<{ page: number; per: number }>) => {
     setLoading(true);
@@ -215,6 +252,15 @@ export default function LeadsCard() {
     setSelectedLead(row);
   };
 
+  const openViewing = (viewing: ViewingSummary | null, lead: LeadRow) => {
+    if (!viewing) return;
+    setViewingModal({
+      ...viewing,
+      name: viewing.name ?? lead.name ?? lead.caller?.name ?? null,
+      phone: viewing.phone ?? lead.phone_e164,
+    });
+  };
+
   const onHeaderClick = (key: SortKey) => {
     if (sort === key) {
       setOrder(order === 'asc' ? 'desc' : 'asc');
@@ -281,6 +327,7 @@ export default function LeadsCard() {
                   <Th label="Lead" active={sort === 'name'} order={order} onClick={() => onHeaderClick('name')} />
                   <th className="px-6 py-2">Phone</th>
                   <th className="hidden px-6 py-2 lg:table-cell">Listing</th>
+                  <th className="px-6 py-2 text-center">Viewing</th>
                   <Th label="Status" active={sort === 'status'} order={order} onClick={() => onHeaderClick('status')} />
                   <Th label="Source" active={sort === 'source'} order={order} onClick={() => onHeaderClick('source')} />
                 </tr>
@@ -296,6 +343,21 @@ export default function LeadsCard() {
                     <td className="px-6 py-2">{row.name ?? row.caller?.name ?? '—'}</td>
                     <td className="px-6 py-2">{row.phone_e164}</td>
                     <td className="hidden px-6 py-2 lg:table-cell">{row.listing?.title ?? '—'}</td>
+                    <td className="px-6 py-2 text-center">
+                      {row.viewing ? (
+                        <button
+                          type="button"
+                          onClick={(event) => { event.stopPropagation(); openViewing(row.viewing, row); }}
+                          className="inline-flex items-center justify-center rounded-full border border-primary-200 bg-primary-50 p-1 text-primary-600 transition hover:bg-primary-100 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-primary-400/60 dark:bg-primary-400/20 dark:text-primary-200 dark:hover:bg-primary-400/30"
+                          title="View booking details"
+                        >
+                          <Calendar className="h-4 w-4" aria-hidden="true" />
+                          <span className="sr-only">View booking details</span>
+                        </button>
+                      ) : (
+                        <span className="text-neutral-400">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-2">
                       <span className={clsx(
                         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
@@ -417,6 +479,8 @@ export default function LeadsCard() {
                 )}
               </section>
 
+
+
               {selectedLead.call_log && (
                 <section className="space-y-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Linked Call</h3>
@@ -453,6 +517,60 @@ export default function LeadsCard() {
                 </section>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewingModal} onOpenChange={(open) => { if (!open) setViewingModal(null); }}>
+        <DialogContent className="sm:max-w-md">
+          {viewingModal && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary-500" aria-hidden="true" />
+                  Viewing details
+                </DialogTitle>
+                <DialogDescription>
+                  Appointment reference #{viewingModal.id}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 text-sm">
+                <dl className="space-y-3">
+                  <div>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Scheduled for</dt>
+                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">{formatViewingTime(viewingModal)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Guest name</dt>
+                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">{viewingModal.name ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Phone</dt>
+                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">{viewingModal.phone ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Email</dt>
+                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">{viewingModal.email ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-neutral-500 dark:text-neutral-400">Listing</dt>
+                    <dd className="font-medium text-neutral-900 dark:text-neutral-100">{formatViewingLocation(viewingModal)}</dd>
+                  </div>
+                  {viewingModal.slot?.mode ? (
+                    <div>
+                      <dt className="text-neutral-500 dark:text-neutral-400">Slot mode</dt>
+                      <dd className="font-medium text-neutral-900 dark:text-neutral-100">{titleCase(viewingModal.slot.mode)}</dd>
+                    </div>
+                  ) : null}
+                  {viewingModal.slot?.interval_minutes ? (
+                    <div>
+                      <dt className="text-neutral-500 dark:text-neutral-400">Interval</dt>
+                      <dd className="font-medium text-neutral-900 dark:text-neutral-100">{viewingModal.slot.interval_minutes} minutes</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
