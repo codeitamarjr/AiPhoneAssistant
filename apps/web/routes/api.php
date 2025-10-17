@@ -44,6 +44,8 @@ Route::middleware('api_token')->group(function () {
     Route::get('/listings/by-number', [ListingController::class, 'byNumber']);
     Route::get('/viewing-slots', [ViewingSlotController::class, 'index']);
     Route::get('/appointments/next', [ViewingSlotController::class, 'nextAvailable']);
+    Route::get('/appointments/lookup', [ViewingController::class, 'findByPhone']);
+    Route::get('/appointments/{viewing}', [ViewingController::class, 'show']);
     Route::post('/viewings', [ViewingController::class, 'store']);
     Route::post('/appointments', [ViewingController::class, 'store']);
     Route::patch('/appointments/{viewing}', [ViewingController::class, 'update']);

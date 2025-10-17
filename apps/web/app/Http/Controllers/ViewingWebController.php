@@ -214,6 +214,8 @@ class ViewingWebController extends Controller
             'email' => ['nullable', 'email', 'max:190'],
         ]);
 
+        $data['phone'] = preg_replace('/\s+/', '', trim($data['phone']));
+
         $createdViewing = null;
 
         DB::transaction(function () use ($data, $groupId, &$createdViewing) {

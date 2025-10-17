@@ -44,6 +44,35 @@ const assistantTools = [
     },
     {
         type: 'function',
+        name: 'find_appointment',
+        description: 'Look up an existing appointment by caller phone (optionally scoped to a listing).',
+        parameters: {
+            type: 'object',
+            properties: {
+                phone: { type: 'string', nullable: false, description: 'Caller phone number (E.164 preferred)' },
+                listing_id: {
+                    type: 'integer',
+                    nullable: true,
+                    description: 'Listing ID to narrow the search if known',
+                },
+            },
+            required: ['phone'],
+        },
+    },
+    {
+        type: 'function',
+        name: 'get_appointment',
+        description: 'Fetch detailed information for an appointment by its reference ID.',
+        parameters: {
+            type: 'object',
+            properties: {
+                appointment_id: { type: 'integer', nullable: false, description: 'Appointment reference ID' },
+            },
+            required: ['appointment_id'],
+        },
+    },
+    {
+        type: 'function',
         name: 'create_appointment',
         description: 'Create a viewing appointment in a specific slot.',
         parameters: {
@@ -107,10 +136,10 @@ const assistantTools = [
 
 function buildAssistantInstructions({ greeting, propertyFacts }) {
     return `
-You are the building’s lettings receptionist. Stay professional and friendly in English.
+You are the building's lettings receptionist. Stay professional and friendly in English.
 
 - First sentence must be exactly: "${greeting}" (no words before it)
-- Confirm you’re the property assistant.
+- Confirm you're the property assistant.
 - Only discuss the property, viewings, pricing, amenities, policies, and booking logistics. If the caller requests anything unrelated (e.g. jokes, chit-chat, other topics), politely decline and remind them you can only help with questions about the property.
 - Use the Property facts below; if something is unknown, say so. Never invent, embellish, or contradict these facts.
 - If caller is interested, you can either:
@@ -122,6 +151,7 @@ You are the building’s lettings receptionist. Stay professional and friendly i
 3) Ask for email (optional).
 4) Ask which time/slot they prefer from the available window.
 5) Call \`create_appointment\` once with the chosen slot id (use viewing_slot_id or slot_id), name, phone, email.
+- When modifying existing bookings, first call \`find_appointment\` (requires the caller's phone and optional listing_id) or \`get_appointment\` if they provide the reference number. Confirm details with the caller before proceeding.
 - Reschedules: confirm the new slot then call \`update_appointment\`.
 - Cancellations: confirm the appointment id and call \`cancel_appointment\`.
 - Only call tools with real, user-provided data (no placeholders).
@@ -129,6 +159,56 @@ You are the building’s lettings receptionist. Stay professional and friendly i
 
 Property facts:
 ${propertyFacts}`.trim();
+}
+
+function formatAppointmentWhen(appointment) {
+    const iso = appointment?.scheduled_at ?? appointment?.slot?.start_at ?? null;
+    if (!iso) return 'an unscheduled time';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString('en-IE', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function describeAppointment(appointment) {
+    if (!appointment) return 'No appointment details available.';
+    const when = formatAppointmentWhen(appointment);
+    const name = appointment?.name ? appointment.name : 'the caller';
+    const listingTitle =
+        appointment?.listing?.title ?? appointment?.slot?.listing?.title ?? appointment?.listing_title ?? null;
+    const listingPart = listingTitle ? ` for ${listingTitle}` : '';
+    return `Appointment ${appointment.id ?? ''}${listingPart} is scheduled for ${when} with ${name}.`;
+}
+
+function appointmentSnapshot(appointment) {
+    if (!appointment || typeof appointment !== 'object') return {};
+    const base = {
+        id: appointment.id ?? null,
+        listing_id: appointment.listing_id ?? null,
+        slot_id: appointment.slot_id ?? appointment.viewing_slot_id ?? null,
+        name: appointment.name ?? null,
+        phone: appointment.phone ?? null,
+        email: appointment.email ?? null,
+        scheduled_at: appointment.scheduled_at ?? null,
+    };
+    if (appointment.slot) {
+        base.slot = {
+            id: appointment.slot.id ?? null,
+            start_at: appointment.slot.start_at ?? null,
+            mode: appointment.slot.mode ?? null,
+        };
+    }
+    if (appointment.listing) {
+        base.listing = {
+            id: appointment.listing.id ?? null,
+            title: appointment.listing.title ?? null,
+        };
+    } else if (appointment.slot?.listing) {
+        base.listing = {
+            id: appointment.slot.listing.id ?? null,
+            title: appointment.slot.listing.title ?? null,
+        };
+    }
+    return base;
 }
 
 function createCallStateStore() {
@@ -140,6 +220,7 @@ function createCallStateStore() {
                 startedAt: null,
                 callLogId: null,
                 lastSlotId: null,
+                lastAppointment: null,
             });
         }
         return store.get(callId);
@@ -164,12 +245,30 @@ function createCallStateStore() {
         getLastSlotId(callId) {
             return store.get(callId)?.lastSlotId ?? null;
         },
+        setLastAppointment(callId, appointment) {
+            const entry = ensure(callId);
+            entry.lastAppointment = appointment ?? null;
+            const slotId = appointment?.slot_id ?? appointment?.viewing_slot_id ?? null;
+            if (slotId != null) {
+                const num = Number(slotId);
+                if (Number.isFinite(num) && num > 0) {
+                    entry.lastSlotId = num;
+                }
+            }
+        },
+        getLastAppointment(callId) {
+            return store.get(callId)?.lastAppointment ?? null;
+        },
         clear(callId) {
             store.delete(callId);
         },
         clearLastSlotId(callId) {
             const entry = store.get(callId);
             if (entry) entry.lastSlotId = null;
+        },
+        clearLastAppointment(callId) {
+            const entry = store.get(callId);
+            if (entry) entry.lastAppointment = null;
         },
     };
 }
@@ -338,6 +437,177 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
                             return;
                         }
 
+                        if (fnName === 'find_appointment') {
+                            const rawPhone = args.phone ?? args.phone_e164 ?? null;
+                            const phone = normalizePhone(rawPhone) || normalizePhone(fromCaller);
+                            const listingIdRaw = args.listing_id;
+                            const listingIdCandidate =
+                                listingIdRaw != null && listingIdRaw !== ''
+                                    ? Number(listingIdRaw)
+                                    : listing?.id ?? null;
+                            const listingIdNumber =
+                                listingIdCandidate != null && Number.isFinite(Number(listingIdCandidate))
+                                    ? Number(listingIdCandidate)
+                                    : null;
+
+                            if (!phone) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I didn't catch the phone number on the booking. Could you read it out so I can look it up?",
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
+                            const lookup = await crm.appointments.lookupByPhone(
+                                { phone, listingId: listingIdNumber },
+                                ctx
+                            );
+
+                            if (lookup?.error) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "Something went wrong while checking that booking. Could we double-check the details or try again in a moment?",
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
+                            if (!lookup) {
+                                callState.clearLastAppointment(callId);
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I couldn't find an existing appointment for that number. Would you like me to book one?",
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
+                            callState.setLastAppointment(callId, lookup);
+
+                            const snapshot = appointmentSnapshot(lookup);
+                            ws.send(
+                                JSON.stringify({
+                                    type: 'conversation.item.create',
+                                    item: {
+                                        type: 'message',
+                                        role: 'system',
+                                        content: [
+                                            {
+                                                type: 'input_text',
+                                                text: `FOUND_APPOINTMENT=${JSON.stringify(snapshot)}`,
+                                            },
+                                        ],
+                                    },
+                                })
+                            );
+
+                            const summary = describeAppointment(lookup);
+                            const reference = lookup?.id ? ` The reference number is ${lookup.id}.` : '';
+                            ws.send(
+                                JSON.stringify({
+                                    type: 'response.create',
+                                    response: {
+                                        instructions: `${summary}${reference} Let me know if you'd like to change or cancel it.`,
+                                    },
+                                })
+                            );
+                            return;
+                        }
+
+                        if (fnName === 'get_appointment') {
+                            const appointmentIdRaw = args.appointment_id ?? args.id ?? null;
+                            let appointmentId = appointmentIdRaw != null ? Number(appointmentIdRaw) : Number.NaN;
+                            if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
+                                const cached = callState.getLastAppointment(callId)?.id ?? null;
+                                appointmentId = cached != null ? Number(cached) : Number.NaN;
+                            }
+
+                            if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                'I need the appointment reference number to open it. Could you share it with me?',
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
+                            const appointment = await crm.appointments.getById({ appointmentId }, ctx);
+
+                            if (appointment?.error) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I'm having trouble opening that booking. Let's double-check the reference or try again shortly.",
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
+                            if (!appointment) {
+                                callState.clearLastAppointment(callId);
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I don't have a booking with that reference on file. Could there be a typo in the number?",
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
+                            callState.setLastAppointment(callId, appointment);
+
+                            const snapshot = appointmentSnapshot(appointment);
+                            ws.send(
+                                JSON.stringify({
+                                    type: 'conversation.item.create',
+                                    item: {
+                                        type: 'message',
+                                        role: 'system',
+                                        content: [
+                                            {
+                                                type: 'input_text',
+                                                text: `APPOINTMENT_DETAILS=${JSON.stringify(snapshot)}`,
+                                            },
+                                        ],
+                                    },
+                                })
+                            );
+
+                            const summary = describeAppointment(appointment);
+                            ws.send(
+                                JSON.stringify({
+                                    type: 'response.create',
+                                    response: {
+                                        instructions: `${summary} Let me know what changes you'd like to make.`,
+                                    },
+                                })
+                            );
+                            return;
+                        }
+
                         if (fnName === 'create_appointment') {
                             const slotArg = args.viewing_slot_id ?? args.slot_id ?? null;
                             const slotAsNumber = slotArg !== null && slotArg !== undefined ? Number(slotArg) : Number.NaN;
@@ -366,6 +636,7 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
                             const appt = await crm.appointments.create({ slotId, name, phone, email }, ctx);
                             if (appt?.id) {
                                 callState.clearLastSlotId(callId);
+                                callState.setLastAppointment(callId, appt);
                                 ws.send(
                                     JSON.stringify({
                                         type: 'response.create',
@@ -406,31 +677,60 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
                         }
 
                         if (fnName === 'update_appointment') {
-                            const appointmentId = Number(args.appointment_id);
                             const slotArg = args.viewing_slot_id ?? args.slot_id;
                             const slotCandidate = slotArg !== undefined && slotArg !== null ? Number(slotArg) : Number.NaN;
                             let slotId = Number.isFinite(slotCandidate) && slotCandidate > 0 ? slotCandidate : undefined;
 
                             if (slotId === undefined) {
-                                const cached = callState.getLastSlotId(callId);
-                                if (cached) slotId = cached;
+                                const cachedSlot = callState.getLastSlotId(callId);
+                                if (cachedSlot) slotId = cachedSlot;
                             }
 
                             const name = args.name != null ? String(args.name).trim() : undefined;
                             const phone = args.phone != null ? normalizePhone(args.phone) : undefined;
                             const email = args.email != null ? String(args.email).trim() : undefined;
 
-                            if (!appointmentId) {
+                            let resolvedAppointmentId = args.appointment_id != null ? Number(args.appointment_id) : Number.NaN;
+                            if (!Number.isFinite(resolvedAppointmentId) || resolvedAppointmentId <= 0) {
+                                const cachedId = callState.getLastAppointment(callId)?.id ?? null;
+                                resolvedAppointmentId = cachedId != null ? Number(cachedId) : Number.NaN;
+                            }
+
+                            if (!Number.isFinite(resolvedAppointmentId) || resolvedAppointmentId <= 0) {
                                 log('warn', 'appt:update:missing-id', { ctx, callId });
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I don't have the booking reference yet. Could you share the appointment number so I can update it?",
+                                        },
+                                    })
+                                );
                                 return;
                             }
 
                             const appt = await crm.appointments.update(
-                                { appointmentId, slotId, name, phone, email },
+                                { appointmentId: resolvedAppointmentId, slotId, name, phone, email },
                                 ctx
                             );
+
+                            if (appt?.error) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I'm unable to update that booking right now. Let's confirm the new time and try again shortly.",
+                                        },
+                                    })
+                                );
+                                return;
+                            }
+
                             if (appt?.id) {
                                 callState.clearLastSlotId(callId);
+                                callState.setLastAppointment(callId, appt);
                                 ws.send(
                                     JSON.stringify({
                                         type: 'response.create',
@@ -444,20 +744,50 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
                         }
 
                         if (fnName === 'cancel_appointment') {
-                            const appointmentId = Number(args.appointment_id);
-                            if (!appointmentId) {
+                            let appointmentId = args.appointment_id != null ? Number(args.appointment_id) : Number.NaN;
+                            if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
+                                const cachedId = callState.getLastAppointment(callId)?.id ?? null;
+                                appointmentId = cachedId != null ? Number(cachedId) : Number.NaN;
+                            }
+
+                            if (!Number.isFinite(appointmentId) || appointmentId <= 0) {
                                 log('warn', 'appt:cancel:missing-id', { ctx, callId });
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                'I need the appointment reference number to cancel it. Could you share that with me?',
+                                        },
+                                    })
+                                );
                                 return;
                             }
-                            const ok = await crm.appointments.cancel({ appointmentId }, ctx);
-                            if (ok) {
+
+                            const cancelResult = await crm.appointments.cancel({ appointmentId }, ctx);
+                            if (cancelResult === true) {
                                 callState.clearLastSlotId(callId);
+                                callState.clearLastAppointment(callId);
                                 ws.send(
                                     JSON.stringify({
                                         type: 'response.create',
                                         response: { instructions: `Your appointment ${appointmentId} has been canceled.` },
                                     })
                                 );
+                                return;
+                            }
+
+                            if (cancelResult?.error) {
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions:
+                                                "I'm unable to cancel that booking right now. Let's confirm the reference and try again shortly.",
+                                        },
+                                    })
+                                );
+                                return;
                             }
                             return;
                         }

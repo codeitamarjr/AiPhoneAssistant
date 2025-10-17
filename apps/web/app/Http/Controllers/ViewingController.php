@@ -32,6 +32,40 @@ class ViewingController extends Controller
         //
     }
 
+    public function findByPhone(Request $request)
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:40'],
+            'listing_id' => ['nullable', 'integer', 'exists:listings,id'],
+        ]);
+
+        $rawPhone = trim($data['phone']);
+        $normalizedPhone = preg_replace('/\s+/', '', $rawPhone);
+
+        $query = Viewing::query()
+            ->with(['slot.listing'])
+            ->where(function ($builder) use ($rawPhone, $normalizedPhone) {
+                $builder->where('phone', $rawPhone);
+                if ($normalizedPhone !== $rawPhone) {
+                    $builder->orWhere('phone', $normalizedPhone);
+                }
+            });
+
+        if (!empty($data['listing_id'])) {
+            $query->where('listing_id', $data['listing_id']);
+        }
+
+        $viewing = $query
+            ->orderByRaw('COALESCE(scheduled_at, created_at) DESC')
+            ->first();
+
+        if (!$viewing) {
+            return response()->json(['message' => 'Appointment not found'], 404);
+        }
+
+        return response()->json($this->presentViewing($viewing));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -51,6 +85,7 @@ class ViewingController extends Controller
         }
 
         $viewing = null;
+        $data['phone'] = preg_replace('/\s+/', '', trim($data['phone']));
 
         DB::transaction(function () use ($slotId, $data, &$viewing) {
             $slot = ViewingSlot::lockForUpdate()->findOrFail($slotId);
@@ -97,7 +132,9 @@ class ViewingController extends Controller
      */
     public function show(Viewing $viewing)
     {
-        //
+        $viewing->loadMissing(['slot.listing']);
+
+        return response()->json($this->presentViewing($viewing));
     }
 
     /**
@@ -153,7 +190,7 @@ class ViewingController extends Controller
             }
 
             if (array_key_exists('phone', $payload)) {
-                $viewing->phone = $payload['phone'];
+                $viewing->phone = preg_replace('/\s+/', '', trim($payload['phone']));
             }
 
             if (array_key_exists('email', $payload)) {

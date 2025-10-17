@@ -121,6 +121,22 @@ PATCH /api/appointments/311
 }
 // (Use DELETE /api/appointments/{id} if the orchestrator needs to cancel.)
 
+- Retrieve an existing booking by its numeric id:
+
+```
+GET /api/appointments/311
+```
+
+Returns the same payload shape as the create response.
+
+- Look up an appointment by caller phone (optionally scoped to a listing):
+
+```
+GET /api/appointments/lookup?phone=+353861234567&listing_id=42
+```
+
+Returns `404` if no current booking matches the phone number.
+
 
 # Notification Preferences API
 
