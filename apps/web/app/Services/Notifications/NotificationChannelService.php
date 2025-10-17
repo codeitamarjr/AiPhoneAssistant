@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Viewing;
 use App\Notifications\LeadCapturedNotification;
 use App\Notifications\ViewingBookedNotification;
+use App\Notifications\ViewingCancelledNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
@@ -55,6 +56,26 @@ class NotificationChannelService
         Notification::send(
             $recipients,
             new ViewingBookedNotification($viewing, $group->name, $listing?->title)
+        );
+    }
+
+    public function notifyViewingCancelled(Viewing $viewing): void
+    {
+        $listing = $viewing->listing()->with('group')->first();
+        $group = $listing?->group;
+
+        if (!$group) {
+            return;
+        }
+
+        $recipients = $this->recipientsForChannel($group, NotificationPreference::CHANNEL_BOOKINGS);
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send(
+            $recipients,
+            new ViewingCancelledNotification($viewing, $group->name, $listing?->title)
         );
     }
 

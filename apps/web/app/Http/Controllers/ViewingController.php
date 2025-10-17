@@ -218,6 +218,11 @@ class ViewingController extends Controller
      */
     public function destroy(Viewing $viewing)
     {
+        $viewing->loadMissing(['listing.group', 'slot.listing']);
+        $notificationViewing = $viewing->replicate();
+        $notificationViewing->setRelation('listing', $viewing->listing);
+        $notificationViewing->setRelation('slot', $viewing->slot);
+
         DB::transaction(function () use ($viewing) {
             $slot = ViewingSlot::lockForUpdate()->find($viewing->viewing_slot_id);
 
@@ -229,6 +234,8 @@ class ViewingController extends Controller
                 $slot->refreshSchedule();
             }
         });
+
+        $this->notifications->notifyViewingCancelled($notificationViewing);
 
         return response()->json(['message' => 'Appointment cancelled.']);
     }

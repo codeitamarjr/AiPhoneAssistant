@@ -162,4 +162,5 @@ PUT /api/v1/notification-preferences
 
 - When a **lead** is captured, all workspace members who subscribed to the `leads` channel receive an email summary.
 - When a **viewing/booking** is created, subscribers to the `bookings` channel receive the appointment details.
+- When a **viewing is cancelled**, the same subscribers receive a cancellation summary with the appointment reference.
 - Preferences can also be managed in the web UI under **Settings → Notifications**.

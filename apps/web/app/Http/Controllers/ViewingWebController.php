@@ -277,6 +277,10 @@ class ViewingWebController extends Controller
         $viewing->loadMissing(['listing', 'slot']);
         $this->assertViewingBelongsToGroup($viewing, $groupId);
 
+        $notificationViewing = $viewing->replicate();
+        $notificationViewing->setRelation('listing', $viewing->listing);
+        $notificationViewing->setRelation('slot', $viewing->slot);
+
         DB::transaction(function () use ($viewing) {
             $slot = ViewingSlot::query()
                 ->whereKey($viewing->viewing_slot_id)
@@ -291,6 +295,8 @@ class ViewingWebController extends Controller
                 $slot->refreshSchedule();
             }
         });
+
+        $this->notifications->notifyViewingCancelled($notificationViewing);
 
         return redirect()
             ->route('appointments.index')
