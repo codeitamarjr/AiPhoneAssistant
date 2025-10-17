@@ -119,3 +119,4 @@ PATCH /api/appointments/311
     }
   }
 }
+// (Use DELETE /api/appointments/{id} if the orchestrator needs to cancel.)
