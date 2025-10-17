@@ -22,6 +22,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/listings/{listing}',     [\App\Http\Controllers\ListingWebController::class, 'update'])->name('listings.update');
     Route::delete('/listings/{listing}',  [\App\Http\Controllers\ListingWebController::class, 'destroy'])->name('listings.destroy');
 
+    Route::prefix('appointments')->name('appointments.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ViewingWebController::class, 'index'])->name('index');
+        Route::post('/slots', [\App\Http\Controllers\ViewingWebController::class, 'storeSlot'])->name('slots.store');
+        Route::put('/slots/{slot}', [\App\Http\Controllers\ViewingWebController::class, 'updateSlot'])->name('slots.update');
+        Route::delete('/slots/{slot}', [\App\Http\Controllers\ViewingWebController::class, 'destroySlot'])->name('slots.destroy');
+        Route::post('/bookings', [\App\Http\Controllers\ViewingWebController::class, 'storeBooking'])->name('bookings.store');
+        Route::delete('/bookings/{viewing}', [\App\Http\Controllers\ViewingWebController::class, 'destroyBooking'])->name('bookings.destroy');
+    });
+
     Route::prefix('inventory')->name('inventory.')->group(function () {
         Route::resource('buildings', \App\Http\Controllers\BuildingWebController::class)->except(['show']);
         Route::resource('units', \App\Http\Controllers\UnitWebController::class)->except(['show']);
