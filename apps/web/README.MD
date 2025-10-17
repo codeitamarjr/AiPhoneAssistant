@@ -53,6 +53,13 @@ GET /api/appointments/next?listing_id=42
     "title": "Oakview 2B",
     "address": "12 Oakview Road",
     "postcode": "D02"
+  },
+  "slot_summary": {
+    "scheduled_at": "2025-10-06T10:20:00+00:00",
+    "window_start": "2025-10-06T10:00:00+00:00",
+    "window_end": "2025-10-06T10:30:00+00:00",
+    "mode": "staggered",
+    "position": 2
   }
 }
 POST /api/appointments
@@ -120,6 +127,11 @@ PATCH /api/appointments/311
   }
 }
 // (Use DELETE /api/appointments/{id} if the orchestrator needs to cancel.)
+
+Notes:
+- `scheduled_at` is the exact slot start time that will be booked.
+- `available_from` / `available_until` describe the overall window (useful for open slots).
+- `slot_summary` mirrors the important timing details for downstream consumers (e.g. orchestrator prompts).
 
 - Retrieve an existing booking by its numeric id:
 

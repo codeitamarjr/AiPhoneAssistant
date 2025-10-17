@@ -112,6 +112,13 @@ class ViewingSlotController extends Controller
                 'address' => $slot->listing->address,
                 'postcode' => $slot->listing->postcode,
             ] : null,
+            'slot_summary' => [
+                'scheduled_at' => $scheduledAt->toIso8601String(),
+                'window_start' => optional($slot->start_at)->toIso8601String(),
+                'window_end' => optional($endsAt)->toIso8601String(),
+                'mode' => $slot->mode,
+                'position' => $slot->booked,
+            ],
         ]);
     }
 

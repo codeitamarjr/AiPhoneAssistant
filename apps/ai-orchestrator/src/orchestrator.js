@@ -151,6 +151,7 @@ You are the building's lettings receptionist. Stay professional and friendly in 
 3) Ask for email (optional).
 4) Ask which time/slot they prefer from the available window.
 5) Call \`create_appointment\` once with the chosen slot id (use viewing_slot_id or slot_id), name, phone, email.
+- When presenting availability from \`get_next_slot\`, quote the exact scheduled time (e.g. “There’s a slot at 10:50am”) so the caller knows what will be booked.
 - When modifying existing bookings, first call \`find_appointment\` (requires the caller's phone and optional listing_id) or \`get_appointment\` if they provide the reference number. Confirm details with the caller before proceeding.
 - Reschedules: confirm the new slot then call \`update_appointment\`.
 - Cancellations: confirm the appointment id and call \`cancel_appointment\`.
@@ -425,11 +426,25 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
                                     );
                                 }
 
+                                const scheduledAt = slotData.scheduled_at;
+                                const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+                                const formattedTime = scheduledDate && !Number.isNaN(scheduledDate.getTime())
+                                    ? scheduledDate.toLocaleString('en-IE', { dateStyle: 'medium', timeStyle: 'short' })
+                                    : scheduledAt;
+
+                                let instructions = formattedTime
+                                    ? `The next available viewing slot is at ${formattedTime}.`
+                                    : 'A viewing slot is available.';
+
+                                if (slotData.mode === 'open' && slotData.available_from && slotData.available_until) {
+                                    instructions += ` The window for this slot runs from ${slotData.available_from} to ${slotData.available_until}.`;
+                                }
+
                                 ws.send(
                                     JSON.stringify({
                                         type: 'response.create',
                                         response: {
-                                            instructions: `The next viewing has availability between ${slotData.available_from} and ${slotData.available_until}.`,
+                                            instructions,
                                         },
                                     })
                                 );

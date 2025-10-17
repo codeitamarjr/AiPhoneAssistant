@@ -181,7 +181,7 @@ const spec = {
         "description": "Looks up the listing tied to `to_e164`; returns listing object or 404 with `{message}`.",
         "security": [{"ApiTokenAuth": []}],
         "parameters": [{"$ref": "#/components/parameters/ToE164Param"}],
-        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"404": {"$ref": "#/components/responses/NotFound"}}
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"slot_id": {"type": "integer"},"viewing_slot_id": {"type": "integer"},"mode": {"type": "string"},"interval_minutes": {"type": "integer","nullable": true},"scheduled_at": {"type": "string","format": "date-time"},"available_from": {"type": "string","format": "date-time","nullable": true},"available_until": {"type": "string","format": "date-time","nullable": true},"capacity": {"type": "integer"},"booked": {"type": "integer"},"remaining": {"type": "integer"},"listing": {"type": "object","nullable": true,"properties": {"id": {"type": "integer"},"title": {"type": "string","nullable": true},"address": {"type": "string","nullable": true},"postcode": {"type": "string","nullable": true}}},"slot_summary": {"type": "object","properties": {"scheduled_at": {"type": "string","format": "date-time"},"window_start": {"type": "string","format": "date-time","nullable": true},"window_end": {"type": "string","format": "date-time","nullable": true},"mode": {"type": "string"},"position": {"type": "integer"}}}}}}}},"404": {"$ref": "#/components/responses/NotFound"}}
       }
     },
     "/viewing-slots": {
