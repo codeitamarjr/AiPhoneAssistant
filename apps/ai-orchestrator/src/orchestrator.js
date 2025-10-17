@@ -136,7 +136,7 @@ const assistantTools = [
 
 function buildAssistantInstructions({ greeting, propertyFacts }) {
     return `
-You are the building's lettings receptionist. Stay professional and friendly in English.
+You are the building's lettings receptionist. Stay professional and friendly.
 
 - First sentence must be exactly: "${greeting}" (no words before it)
 - Confirm you're the property assistant.
@@ -369,7 +369,10 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
 
                         if (fnName === 'save_lead') {
                             try {
-                                const providedPhone = normalizePhone(args.phone_e164);
+                                const providedPhone =
+                                    normalizePhone(args.phone_e164)
+                                    || normalizePhone(args.phone)
+                                    || normalizePhone(args.phone_number);
                                 const phone = providedPhone || normalizePhone(fromCaller);
                                 if (!phone) {
                                     log('warn', 'lead:missing-or-bad-phone', { ctx, callId, raw: args.phone_e164 });
@@ -394,6 +397,19 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
                                     hasNotes: !!args.notes,
                                     status: args.status || 'new',
                                 });
+
+                                const confirmation = args?.name
+                                    ? `Thanks ${args.name}! I've logged your details and someone will follow up shortly.`
+                                    : 'Thanks! I’ve taken your details and the team will be in touch soon.';
+
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'response.create',
+                                        response: {
+                                            instructions: confirmation,
+                                        },
+                                    })
+                                );
                             } catch (error) {
                                 log('error', 'lead:create:failed', { ctx, callId, err: String(error?.message || error) });
                             }
