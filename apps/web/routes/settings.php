@@ -5,6 +5,7 @@ use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\Settings\TwilioController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
+use App\Http\Controllers\Settings\NotificationPreferenceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -31,4 +32,5 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/team', [TeamController::class, 'show'])->name('team.show');
 
     Route::get('settings/twilio', [TwilioController::class, 'show'])->name('twilio.show');
+    Route::get('settings/notifications', [NotificationPreferenceController::class, 'show'])->name('notifications.show');
 });

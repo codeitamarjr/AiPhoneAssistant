@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Listing;
 use App\Models\Viewing;
 use App\Models\ViewingSlot;
+use App\Services\Notifications\NotificationChannelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ use Inertia\Response;
 
 class ViewingWebController extends Controller
 {
+    public function __construct(private readonly NotificationChannelService $notifications)
+    {
+    }
+
     public function index(Request $request): Response
     {
         $groupId = $this->requireGroupId($request);
@@ -209,7 +214,9 @@ class ViewingWebController extends Controller
             'email' => ['nullable', 'email', 'max:190'],
         ]);
 
-        DB::transaction(function () use ($data, $groupId) {
+        $createdViewing = null;
+
+        DB::transaction(function () use ($data, $groupId, &$createdViewing) {
             $slot = ViewingSlot::query()
                 ->whereKey($data['viewing_slot_id'])
                 ->whereHas('listing', fn ($query) => $query->where('group_id', $groupId))
@@ -240,7 +247,7 @@ class ViewingWebController extends Controller
 
             $slot->increment('booked');
 
-            Viewing::create([
+            $createdViewing = Viewing::create([
                 'listing_id' => $slot->listing_id,
                 'viewing_slot_id' => $slot->id,
                 'name' => $data['name'],
@@ -252,6 +259,10 @@ class ViewingWebController extends Controller
             $slot->refresh();
             $slot->refreshSchedule();
         });
+
+        if ($createdViewing) {
+            $this->notifications->notifyViewingBooked($createdViewing->fresh(['slot.listing']));
+        }
 
         return redirect()
             ->route('appointments.index')

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\NotificationPreference;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
@@ -67,6 +68,18 @@ class User extends Authenticatable implements MustVerifyEmail
     public function memberships()
     {
         return $this->hasMany(Membership::class);
+    }
+
+    public function notificationPreferences()
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function isSubscribedToChannel(string $channel): bool
+    {
+        return $this->notificationPreferences()
+            ->where('channel', $channel)
+            ->exists();
     }
 
     /**

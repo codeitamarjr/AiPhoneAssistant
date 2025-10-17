@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Viewing;
 use App\Models\ViewingSlot;
+use App\Services\Notifications\NotificationChannelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -11,6 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class ViewingController extends Controller
 {
+    public function __construct(private readonly NotificationChannelService $notifications)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -81,7 +86,10 @@ class ViewingController extends Controller
             $slot->refreshSchedule();
         });
 
-        return response()->json($this->presentViewing($viewing->fresh(['slot.listing'])), 201);
+        $viewing = $viewing->fresh(['slot.listing']);
+        $this->notifications->notifyViewingBooked($viewing);
+
+        return response()->json($this->presentViewing($viewing), 201);
     }
 
     /**

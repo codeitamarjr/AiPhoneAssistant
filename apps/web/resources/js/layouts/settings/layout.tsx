@@ -34,6 +34,11 @@ const sidebarNavItems: NavItem[] = [
         icon: null,
     },
     {
+        title: 'Notifications',
+        href: '/settings/notifications',
+        icon: null,
+    },
+    {
         title: 'Workspace team',
         href: showTeam(),
         icon: null,

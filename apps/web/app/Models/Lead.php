@@ -13,4 +13,5 @@ class Lead extends Model
     public function listing(){ return $this->belongsTo(Listing::class); }
     public function caller(){ return $this->belongsTo(Caller::class); }
     public function callLog(){ return $this->belongsTo(CallLog::class); }
+    public function group(){ return $this->belongsTo(Group::class); }
 }

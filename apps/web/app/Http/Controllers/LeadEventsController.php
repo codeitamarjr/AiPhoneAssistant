@@ -7,11 +7,16 @@ use App\Models\Lead;
 use App\Models\CallLog;
 use App\Models\Listing;
 use App\Models\PhoneNumber;
+use App\Services\Notifications\NotificationChannelService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class LeadEventsController extends Controller
 {
+    public function __construct(private readonly NotificationChannelService $notifications)
+    {
+    }
+
     public function store(Request $r)
     {
         $data = $r->validate([
@@ -90,6 +95,8 @@ class LeadEventsController extends Controller
             'notes'       => $data['notes'] ?? null,
             'status'      => $data['status'] ?? 'new',
         ]);
+
+        $this->notifications->notifyLeadCaptured($lead);
 
         return response()->json(['ok' => true, 'id' => $lead->id]);
     }

@@ -120,3 +120,30 @@ PATCH /api/appointments/311
   }
 }
 // (Use DELETE /api/appointments/{id} if the orchestrator needs to cancel.)
+
+
+# Notification Preferences API
+
+Authenticated users can manage their email notification subscriptions for AI Phone Assistant events.
+
+```
+GET /api/v1/notification-preferences
+
+Response
+{
+  "channels": [
+    { "key": "leads", "label": "New leads", "description": "Email me when a new lead is captured by the assistant." },
+    { "key": "bookings", "label": "New bookings", "description": "Email me when a new viewing is booked by the assistant." }
+  ],
+  "subscriptions": ["leads"]
+}
+
+PUT /api/v1/notification-preferences
+{
+  "channels": ["leads", "bookings"]
+}
+```
+
+- When a **lead** is captured, all workspace members who subscribed to the `leads` channel receive an email summary.
+- When a **viewing/booking** is created, subscribers to the `bookings` channel receive the appointment details.
+- Preferences can also be managed in the web UI under **Settings → Notifications**.

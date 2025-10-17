@@ -12,7 +12,8 @@ use App\Http\Controllers\{
     CallLogApiController,
     ListingApiController,
     LeadEventsController,
-    LeadApiController
+    LeadApiController,
+    NotificationPreferenceApiController,
 };
 use App\Http\Controllers\{CallEventsController};
 
@@ -34,6 +35,8 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/leads', [LeadApiController::class, 'index']);
     Route::patch('/leads/{lead}', [LeadApiController::class, 'update']);
     Route::post('/groups/{group}/invitations', [\App\Http\Controllers\GroupInvitationController::class, 'store']);
+    Route::get('/notification-preferences', [\App\Http\Controllers\NotificationPreferenceApiController::class, 'index']);
+    Route::put('/notification-preferences', [\App\Http\Controllers\NotificationPreferenceApiController::class, 'update']);
 });
 
 // Public/tenant APIs (example) — protect with your API token middleware
