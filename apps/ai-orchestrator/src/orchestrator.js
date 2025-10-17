@@ -13,7 +13,7 @@ const assistantTools = [
             type: 'object',
             properties: {
                 name: { type: 'string', nullable: true, description: 'Full name of the caller' },
-                phone_e164: { type: 'string', nullable: false, description: 'Callback number in E.164 (e.g. 353...)' },
+                phone_e164: { type: 'string', nullable: false, description: 'Callback number (international format preferred, e.g. +353...)' },
                 email: { type: 'string', nullable: true, description: 'Email address (optional)' },
                 notes: {
                     type: 'string',
@@ -49,7 +49,7 @@ const assistantTools = [
         parameters: {
             type: 'object',
             properties: {
-                phone: { type: 'string', nullable: false, description: 'Caller phone number (E.164 preferred)' },
+                phone: { type: 'string', nullable: false, description: 'Caller phone number (AI should normalise to international format)' },
                 listing_id: {
                     type: 'integer',
                     nullable: true,
@@ -89,7 +89,7 @@ const assistantTools = [
                     description: 'Alias for viewing_slot_id accepted by the CRM API.',
                 },
                 name: { type: 'string', nullable: false, description: 'Full name' },
-                phone: { type: 'string', nullable: false, description: 'E.164 phone (e.g. +353...)' },
+                phone: { type: 'string', nullable: false, description: 'Caller phone number (return in international format, e.g. +353...)' },
                 email: { type: 'string', nullable: true, description: 'Email (optional)' },
             },
             required: ['name', 'phone'],
@@ -114,7 +114,7 @@ const assistantTools = [
                     description: 'Alias for viewing_slot_id accepted by the CRM API.',
                 },
                 name: { type: 'string', nullable: true },
-                phone: { type: 'string', nullable: true, description: 'E.164 phone' },
+                phone: { type: 'string', nullable: true, description: 'Optional phone number (international format preferred)' },
                 email: { type: 'string', nullable: true },
             },
             required: ['appointment_id'],
@@ -147,7 +147,7 @@ You are the building's lettings receptionist. Stay professional and friendly.
 • Offer to book a viewing now.
 - When booking:
 1) If caller asks “when is the next one?”, call \`get_next_slot\` with the current listing_id.
-2) Collect full name and confirm the phone in E.164 (+353…).
+2) Collect full name and confirm the contact phone number, repeating it back in international format (e.g. +353… or whichever country the caller specifies).
 3) Ask for email (optional).
 4) Ask which time/slot they prefer from the available window.
 5) Call \`create_appointment\` once with the chosen slot id (use viewing_slot_id or slot_id), name, phone, email.
@@ -369,10 +369,10 @@ function createRealtimeSessionConnector({ config, log, crm, callState, seenCalls
 
                         if (fnName === 'save_lead') {
                             try {
-                                const providedPhone =
-                                    normalizePhone(args.phone_e164)
-                                    || normalizePhone(args.phone)
-                                    || normalizePhone(args.phone_number);
+                        const providedPhone =
+                            normalizePhone(args.phone_e164)
+                            || normalizePhone(args.phone)
+                            || normalizePhone(args.phone_number);
                                 const phone = providedPhone || normalizePhone(fromCaller);
                                 if (!phone) {
                                     log('warn', 'lead:missing-or-bad-phone', { ctx, callId, raw: args.phone_e164 });
