@@ -18,6 +18,7 @@ const {
 } = process.env;
 
 const callStartedAt = new Map();
+const lastSuggestedSlotByCallId = new Map();
 
 // --- tiny structured logger ---
 const levels = ['debug', 'info', 'warn', 'error'];
@@ -95,12 +96,18 @@ function extractDialedE164FromHeaders(sipHeaders = [], from_e164 = null) {
 const yesNo = (b) => (b === true ? 'Yes' : b === false ? 'No' : '—');
 
 function buildGreetingFromListing(listing) {
+    const buildingName = listing?.building?.name?.trim();
+    if (buildingName) {
+        return `Thank you for calling to ${buildingName}, how can we help you today?`;
+    }
+
     const title = listing?.title?.trim();
     if (title) {
-        return `Hi, Welcome to ${title}, I'm an AI Phone Assistant, how can I help you today?`;
+        return `Thank you for calling to ${title}, how can we help you today?`;
     }
+
     // Fallback when no listing matched (safe + friendly).
-    return `Hi, Welcome, I'm an AI Phone Assistant, how can I help you today?`;
+    return `Thank you for calling, how can we help you today?`;
 }
 
 function summariseAmenities(amenities) {
@@ -410,6 +417,26 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                         if (!listing_id) return;
                         const data = await crm.getNextSlot({ listing_id }, ctx);
                         if (data?.scheduled_at) {
+                            const slotIdRaw = data?.viewing_slot_id ?? data?.slot_id ?? data?.id ?? null;
+                            const slotId = Number(slotIdRaw);
+                            if (Number.isFinite(slotId) && slotId > 0) {
+                                lastSuggestedSlotByCallId.set(callId, { slotId, slot: data });
+                                ws.send(
+                                    JSON.stringify({
+                                        type: 'conversation.item.create',
+                                        item: {
+                                            type: 'message',
+                                            role: 'system',
+                                            content: [
+                                                {
+                                                    type: 'input_text',
+                                                    text: `NEXT_SLOT_ID=${slotId}`,
+                                                },
+                                            ],
+                                        },
+                                    })
+                                );
+                            }
                             ws.send(
                                 JSON.stringify({
                                     type: 'response.create',
@@ -423,7 +450,17 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                     }
 
                     if (fnName === 'create_appointment') {
-                        const viewing_slot_id = Number(args.viewing_slot_id);
+                        const slotArg = args.viewing_slot_id ?? args.slot_id ?? null;
+                        const slotAsNumber =
+                            slotArg !== null && slotArg !== undefined ? Number(slotArg) : Number.NaN;
+                        let viewing_slot_id = Number.isFinite(slotAsNumber) && slotAsNumber > 0 ? slotAsNumber : null;
+
+                        if (!viewing_slot_id) {
+                            const cached = lastSuggestedSlotByCallId.get(callId);
+                            if (cached?.slotId) {
+                                viewing_slot_id = cached.slotId;
+                            }
+                        }
                         const name = String(args.name || '').trim() || null;
                         const phone = normPhone(args.phone) || normPhone(fromCaller);
                         const email = args.email ? String(args.email).trim() : null;
@@ -439,8 +476,12 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                             return;
                         }
 
-                        const appt = await crm.createAppointment({ viewing_slot_id, name, phone, email }, ctx);
+                        const appt = await crm.createAppointment(
+                            { viewing_slot_id, slot_id: viewing_slot_id, name, phone, email },
+                            ctx
+                        );
                         if (appt?.id) {
+                            lastSuggestedSlotByCallId.delete(callId);
                             ws.send(
                                 JSON.stringify({
                                     type: 'response.create',
@@ -484,7 +525,18 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
 
                     if (fnName === 'update_appointment') {
                         const appointment_id = Number(args.appointment_id);
-                        const viewing_slot_id = args.viewing_slot_id != null ? Number(args.viewing_slot_id) : undefined;
+                        const slotArg = args.viewing_slot_id ?? args.slot_id;
+                        const slotCandidate =
+                            slotArg !== undefined && slotArg !== null ? Number(slotArg) : Number.NaN;
+                        let viewing_slot_id =
+                            Number.isFinite(slotCandidate) && slotCandidate > 0 ? slotCandidate : undefined;
+
+                        if (viewing_slot_id === undefined) {
+                            const cached = lastSuggestedSlotByCallId.get(callId);
+                            if (cached?.slotId) {
+                                viewing_slot_id = cached.slotId;
+                            }
+                        }
                         const name = args.name != null ? String(args.name).trim() : undefined;
                         const phone = args.phone != null ? normPhone(args.phone) : undefined;
                         const email = args.email != null ? String(args.email).trim() : undefined;
@@ -494,8 +546,12 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                             return;
                         }
 
-                        const appt = await crm.updateAppointment({ id: appointment_id, viewing_slot_id, name, phone, email }, ctx);
+                        const appt = await crm.updateAppointment(
+                            { id: appointment_id, viewing_slot_id, slot_id: viewing_slot_id, name, phone, email },
+                            ctx
+                        );
                         if (appt?.id) {
+                            lastSuggestedSlotByCallId.delete(callId);
                             ws.send(
                                 JSON.stringify({
                                     type: 'response.create',
@@ -516,6 +572,7 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                         }
                         const ok = await crm.cancelAppointment({ id: appointment_id }, ctx);
                         if (ok) {
+                            lastSuggestedSlotByCallId.delete(callId);
                             ws.send(
                                 JSON.stringify({
                                     type: 'response.create',
@@ -528,13 +585,13 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                 }
 
                 if (msg.type.startsWith('response.function_call_arguments')) {
-                    logj('debug', 'fncall:event', {
-                        ctx,
-                        callId,
-                        type: msg.type,
-                        name: msg.name,
-                        sample: String(msg.arguments || '').slice(0, 200),
-                    });
+                    // logj('debug', 'fncall:event', {
+                    //     ctx,
+                    //     callId,
+                    //     type: msg.type,
+                    //     name: msg.name,
+                    //     sample: String(msg.arguments || '').slice(0, 200),
+                    // });
                 }
             });
 
@@ -557,6 +614,7 @@ async function connectRealtimeWS({ callId, ctx, listing, greeting, fromCaller = 
                     const started = callStartedAt.get(callId);
                     const durationSeconds = started ? Math.max(0, Math.round((Date.now() - started) / 1000)) : null;
                     callStartedAt.delete(callId);
+                    lastSuggestedSlotByCallId.delete(callId);
                     const finalStatus = opened ? 'completed' : code === 1000 ? 'completed' : 'failed';
                     crm.logCallEnd({ callId, status: finalStatus, durationSeconds, ctx }).catch(() => {});
                 }
@@ -647,7 +705,7 @@ app.post('/webhook', async (req, res) => {
             const instructions = `
             You are an AI lettings assistant. Start in English.
 
-            - First line (verbatim): "${openingGreeting}"
+            - First sentence must be exactly: "${openingGreeting}" (no words before it)
             - Confirm you’re the property assistant.
             - Use the Property facts below; if unknown, say so.
             - If caller is interested, you can either:
@@ -658,7 +716,7 @@ app.post('/webhook', async (req, res) => {
             2) Collect full name and confirm the phone in E.164 (+353…).
             3) Ask for email (optional).
             4) Ask which time/slot they prefer from the available window.
-            5) Call \`create_appointment\` once with viewing_slot_id, name, phone, email.
+            5) Call \`create_appointment\` once with the chosen slot id (use viewing_slot_id or slot_id), name, phone, email.
             - Reschedules: confirm the new slot then call \`update_appointment\`.
             - Cancellations: confirm the appointment id and call \`cancel_appointment\`.
             - Only call tools with real, user-provided data (no placeholders).
@@ -725,12 +783,21 @@ app.post('/webhook', async (req, res) => {
                             parameters: {
                                 type: 'object',
                                 properties: {
-                                    viewing_slot_id: { type: 'integer', nullable: false, description: 'Viewing slot ID (e.g. 17)' },
+                                    viewing_slot_id: {
+                                        type: 'integer',
+                                        nullable: true,
+                                        description: 'Viewing slot ID (e.g. 17). Provide this or slot_id.',
+                                    },
+                                    slot_id: {
+                                        type: 'integer',
+                                        nullable: true,
+                                        description: 'Alias for viewing_slot_id accepted by the CRM API.',
+                                    },
                                     name: { type: 'string', nullable: false, description: 'Full name' },
                                     phone: { type: 'string', nullable: false, description: 'E.164 phone (e.g. +353...)' },
                                     email: { type: 'string', nullable: true, description: 'Email (optional)' },
                                 },
-                                required: ['viewing_slot_id', 'name', 'phone'],
+                                required: ['name', 'phone'],
                             },
                         },
                         {
@@ -741,7 +808,16 @@ app.post('/webhook', async (req, res) => {
                                 type: 'object',
                                 properties: {
                                     appointment_id: { type: 'integer', nullable: false, description: 'Appointment ID to modify' },
-                                    viewing_slot_id: { type: 'integer', nullable: true, description: 'New slot ID' },
+                                    viewing_slot_id: {
+                                        type: 'integer',
+                                        nullable: true,
+                                        description: 'New viewing slot ID; provide this or slot_id.',
+                                    },
+                                    slot_id: {
+                                        type: 'integer',
+                                        nullable: true,
+                                        description: 'Alias for viewing_slot_id accepted by the CRM API.',
+                                    },
                                     name: { type: 'string', nullable: true },
                                     phone: { type: 'string', nullable: true, description: 'E.164 phone' },
                                     email: { type: 'string', nullable: true },

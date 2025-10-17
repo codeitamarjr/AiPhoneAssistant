@@ -150,11 +150,19 @@ export function createCRMClient({ baseUrl, token, log = () => {} }) {
         }
     }
 
-    async function createAppointment({ viewing_slot_id, name, phone, email }, ctx) {
-        if (!http || !viewing_slot_id) return null;
+    async function createAppointment({ viewing_slot_id, slot_id, name, phone, email }, ctx) {
+        if (!http) return null;
+        const resolvedSlotId = viewing_slot_id ?? slot_id ?? null;
+        if (!resolvedSlotId) return null;
         const t0 = performance.now();
         try {
-            const payload = { viewing_slot_id, name, phone, email };
+            const payload = {
+                viewing_slot_id: resolvedSlotId,
+                slot_id: resolvedSlotId,
+                name,
+                phone,
+                email,
+            };
             const { data, status } = await http.post('/api/appointments', payload);
             log('info', 'CRM appointment created', {
                 ctx,
@@ -169,18 +177,23 @@ export function createCRMClient({ baseUrl, token, log = () => {} }) {
                 ctx,
                 status: e?.response?.status,
                 err: e?.message,
+                slot_id: resolvedSlotId,
                 body: e?.response?.data && typeof e.response.data === 'object' ? JSON.stringify(e.response.data).slice(0, 800) : undefined,
             });
             return { error: { status: e?.response?.status, body: e?.response?.data ?? null } };
         }
     }
 
-    async function updateAppointment({ id, viewing_slot_id, name, phone, email }, ctx) {
+    async function updateAppointment({ id, viewing_slot_id, slot_id, name, phone, email }, ctx) {
         if (!http || !id) return null;
         const t0 = performance.now();
         try {
             const payload = {};
-            if (viewing_slot_id != null) payload.viewing_slot_id = viewing_slot_id;
+            const resolvedSlotId = viewing_slot_id ?? slot_id ?? null;
+            if (resolvedSlotId != null) {
+                payload.viewing_slot_id = resolvedSlotId;
+                payload.slot_id = resolvedSlotId;
+            }
             if (name != null) payload.name = name;
             if (phone != null) payload.phone = phone;
             if (email != null) payload.email = email;
@@ -200,6 +213,7 @@ export function createCRMClient({ baseUrl, token, log = () => {} }) {
                 id,
                 status: e?.response?.status,
                 err: e?.message,
+                slot_id: resolvedSlotId ?? null,
                 body: e?.response?.data && typeof e.response.data === 'object' ? JSON.stringify(e.response.data).slice(0, 800) : undefined,
             });
             return { error: { status: e?.response?.status, body: e?.response?.data ?? null } };
