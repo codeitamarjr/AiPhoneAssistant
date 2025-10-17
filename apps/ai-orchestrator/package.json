@@ -1,0 +1,22 @@
+{
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --enable-source-maps src/index.js",
+    "start": "node --enable-source-maps src/index.js",
+    "build": "echo \"No build step for JS\"",
+    "tunnel": "npx ngrok http 5050 --log=stdout",
+    "dev:tunneled": "concurrently -k -s first -n server,ngrok -c blue,magenta \"npm:dev\" \"npm:tunnel\""
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "body-parser": "^2.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "openai": "^6.3.0",
+    "raw-body": "^3.0.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

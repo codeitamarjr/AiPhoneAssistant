@@ -1,4 +1,0 @@
-[submodule "apps/ai-orchestrator"]
-	path = apps/ai-orchestrator
-	url = https://github.com/codeitamarjr/ai-orchestrator.git
-	branch = master
