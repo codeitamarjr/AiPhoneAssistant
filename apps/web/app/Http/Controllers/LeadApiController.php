@@ -15,15 +15,15 @@ class LeadApiController extends Controller
         $user = $request->user();
         $periodStart = now()->startOfMonth();
         $periodEnd = now();
+        $groupId = null;
+        if (method_exists($user, 'currentGroupId')) {
+            $groupId = $user->currentGroupId();
+        } elseif (property_exists($user, 'group_id') && $user->group_id) {
+            $groupId = $user->group_id;
+        }
 
         $scopedLeads = Lead::query()
-            ->when(method_exists($user, 'currentGroupId'), function ($q) use ($user) {
-                $q->where('group_id', $user->currentGroupId());
-            }, function ($q) use ($user) {
-                if (property_exists($user, 'group_id') && $user->group_id) {
-                    $q->where('group_id', $user->group_id);
-                }
-            })
+            ->when($groupId, fn ($q) => $q->where('group_id', $groupId))
             ->where('created_at', '>=', $periodStart);
 
         $totalLeads = (clone $scopedLeads)->count();
@@ -34,14 +34,20 @@ class LeadApiController extends Controller
             ->pluck('aggregate', 'status');
 
         $scopedCalls = CallLog::query()
-            ->when(method_exists($user, 'currentGroupId'), function ($q) use ($user) {
-                $q->where('group_id', $user->currentGroupId());
-            }, function ($q) use ($user) {
-                if (property_exists($user, 'group_id') && $user->group_id) {
-                    $q->where('group_id', $user->group_id);
-                }
-            })
+            ->when($groupId, fn ($q) => $q->where('group_id', $groupId))
             ->where('created_at', '>=', $periodStart);
+
+        $viewingStats = collect();
+        if ($groupId) {
+            $viewingStats = \App\Models\Viewing::query()
+                ->whereHas('listing', fn ($listing) => $listing->where('group_id', $groupId))
+                ->whereBetween('created_at', [$periodStart, $periodEnd])
+                ->get();
+        }
+
+        $viewingsTotal = $viewingStats->count();
+        $viewingsScheduled = $viewingStats->filter(fn ($viewing) => $viewing->scheduled_at !== null)->count();
+        $viewingsCancelled = max($viewingsTotal - $viewingsScheduled, 0);
 
         $totalCalls = (clone $scopedCalls)->count();
         $completedCalls = (clone $scopedCalls)->where('status', 'completed')->count();
@@ -69,6 +75,11 @@ class LeadApiController extends Controller
             'calls' => [
                 'total'     => $totalCalls,
                 'completed' => $completedCalls,
+            ],
+            'viewings' => [
+                'total'      => $viewingsTotal,
+                'scheduled'  => $viewingsScheduled,
+                'cancelled'  => $viewingsCancelled,
             ],
             'comparisons' => [
                 'capture_rate_pct' => $captureRate,

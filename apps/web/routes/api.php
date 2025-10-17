@@ -13,6 +13,7 @@ use App\Http\Controllers\{
     ListingApiController,
     LeadEventsController,
     LeadApiController,
+    ViewingStatsController,
     NotificationPreferenceApiController,
 };
 use App\Http\Controllers\{CallEventsController};
@@ -35,6 +36,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/leads', [LeadApiController::class, 'index']);
     Route::patch('/leads/{lead}', [LeadApiController::class, 'update']);
     Route::post('/groups/{group}/invitations', [\App\Http\Controllers\GroupInvitationController::class, 'store']);
+    Route::get('/viewings/stats', [ViewingStatsController::class, 'index']);
     Route::get('/notification-preferences', [\App\Http\Controllers\NotificationPreferenceApiController::class, 'index']);
     Route::put('/notification-preferences', [\App\Http\Controllers\NotificationPreferenceApiController::class, 'update']);
 });

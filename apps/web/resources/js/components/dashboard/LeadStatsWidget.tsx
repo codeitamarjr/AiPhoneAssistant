@@ -77,47 +77,40 @@ export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
     return (
         <div
             className={clsx(
-                'relative flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-white p-5 shadow-sm transition-colors dark:border-sidebar-border dark:bg-neutral-950',
+                'relative flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-white p-4 shadow-sm transition-colors dark:border-sidebar-border dark:bg-neutral-950',
                 className,
             )}
         >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-500/8 via-transparent to-emerald-500/4 dark:from-emerald-400/10 dark:to-emerald-400/6" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-500/6 via-transparent to-emerald-500/3 dark:from-emerald-400/10 dark:to-emerald-400/6" />
             <div className="relative flex h-full flex-col gap-3">
-                <header className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
+                <header className="flex items-start justify-between gap-2">
+                    <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                             Leads captured
                         </p>
-                        <p className="text-3xl font-semibold text-neutral-900 dark:text-neutral-100">
+                        <p className="mt-1 text-2xl font-semibold text-neutral-900 dark:text-neutral-100 md:text-3xl">
                             {loading ? '—' : totalLeads.toLocaleString()}
                         </p>
                     </div>
                     <div className="text-right text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {stats ? (
-                            <>
-                                <div>{stats.period.label}</div>
-                                <div>{totalCalls.toLocaleString()} calls logged</div>
-                            </>
-                        ) : (
-                            'Loading stats…'
-                        )}
+                        {stats ? `${stats.period.label}` : 'Loading…'}
                     </div>
                 </header>
 
-                <section className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                <section className="rounded-lg border border-neutral-200/70 px-3 py-2 dark:border-neutral-800/70">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
                         <span>Capture rate</span>
-                        <span className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                        <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : captureRateDisplay}
                         </span>
                     </div>
-                    <div className="w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
                         <div
                             className="h-full rounded-full bg-emerald-500 transition-[width] dark:bg-emerald-400"
                             style={{ width: `${captureProgress}%` }}
                         />
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
                         <span>Call gap</span>
                         <span className="font-medium text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : callGap.toLocaleString()}
@@ -125,33 +118,30 @@ export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
                     </div>
                 </section>
 
-                <section className="grid grid-cols-3 gap-1 text-[11px] text-neutral-600 dark:text-neutral-300">
-                    <div className="rounded-lg border border-neutral-200/60 px-1 py-1.5 text-center dark:border-neutral-800/70">
+                <section className="grid grid-cols-3 gap-2 text-[11px] text-neutral-600 dark:text-neutral-300">
+                    <div className="rounded-lg border border-neutral-200/60 px-2 py-2 text-center dark:border-neutral-800/70">
                         <p className="uppercase tracking-wide text-[10px] text-neutral-500 dark:text-neutral-400">
                             Open
                         </p>
                         <p className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : openLeads.toLocaleString()}
                         </p>
-                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">New + contacted</p>
                     </div>
-                    <div className="rounded-lg border border-neutral-200/60 px-1 py-1.5 text-center dark:border-neutral-800/70">
+                    <div className="rounded-lg border border-neutral-200/60 px-2 py-2 text-center dark:border-neutral-800/70">
                         <p className="uppercase tracking-wide text-[10px] text-neutral-500 dark:text-neutral-400">
                             Qualified
                         </p>
                         <p className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : stats?.leads.by_status.qualified.toLocaleString()}
                         </p>
-                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">Ready to progress</p>
                     </div>
-                    <div className="rounded-lg border border-neutral-200/60 px-1 py-1.5 text-center dark:border-neutral-800/70">
+                    <div className="rounded-lg border border-neutral-200/60 px-2 py-2 text-center dark:border-neutral-800/70">
                         <p className="uppercase tracking-wide text-[10px] text-neutral-500 dark:text-neutral-400">
                             Unique callers
                         </p>
                         <p className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : uniqueCallers.toLocaleString()}
                         </p>
-                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">This month</p>
                     </div>
                 </section>
 

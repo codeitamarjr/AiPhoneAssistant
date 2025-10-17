@@ -1,4 +1,3 @@
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
@@ -8,6 +7,7 @@ import CallsCard from '@/components/calls/CallsCard';
 import LeadsCard from '@/components/leads/LeadsCard';
 import CallStatsWidget from '@/components/dashboard/CallStatsWidget';
 import LeadStatsWidget from '@/components/dashboard/LeadStatsWidget';
+import ViewingStatsWidget from '@/components/dashboard/ViewingStatsWidget';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -24,12 +24,10 @@ export default function Dashboard() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <CallStatsWidget className="aspect-video" />
-                    <LeadStatsWidget className="aspect-video" />
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
+                <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <CallStatsWidget className="h-full" />
+                    <LeadStatsWidget className="h-full" />
+                    <ViewingStatsWidget className="h-full" />
                 </div>
                 {/* Calls & Leads */}
                 <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:border-sidebar-border dark:bg-neutral-950">

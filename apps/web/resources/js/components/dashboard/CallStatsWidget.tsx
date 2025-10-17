@@ -76,49 +76,54 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
     return (
         <div
             className={clsx(
-                'relative flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-white p-6 shadow-sm transition-colors dark:border-sidebar-border dark:bg-neutral-950',
+                'relative flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-white p-4 shadow-sm transition-colors dark:border-sidebar-border dark:bg-neutral-950',
                 className,
             )}
         >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/8 via-transparent to-blue-500/4 dark:from-blue-400/10 dark:to-blue-400/6" />
-            <div className="relative flex flex-col gap-4">
-                <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                        Calls this month
-                    </p>
-                    <p className="mt-2 text-4xl font-semibold text-neutral-900 dark:text-neutral-100">
-                        {loading ? '—' : totalCalls.toLocaleString()}
-                    </p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/6 via-transparent to-blue-500/3 dark:from-blue-400/10 dark:to-blue-400/6" />
+            <div className="relative flex h-full flex-col gap-3">
+                <header className="flex items-start justify-between gap-2">
                     <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                            Calls this month
+                        </p>
+                        <p className="mt-1 text-2xl font-semibold text-neutral-900 dark:text-neutral-100 md:text-3xl">
+                            {loading ? '—' : totalCalls.toLocaleString()}
+                        </p>
+                    </div>
+                    <div className="text-right text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {stats ? stats.period.label : 'Loading…'}
+                    </div>
+                </header>
+                <section className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-neutral-200/70 px-3 py-2 dark:border-neutral-800/70">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                             Minutes handled
                         </p>
-                        <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
+                        <p className="mt-1 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : `${minutesDisplay} min`}
                         </p>
                     </div>
-                    <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                    <div className="rounded-lg border border-neutral-200/70 px-3 py-2 dark:border-neutral-800/70">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
                             Completed calls
                         </p>
-                        <p className="mt-2 text-sm text-neutral-700 dark:text-neutral-200">
-                            {loading ? '—' : `${completedCalls.toLocaleString()} (${completionRate}% done)`}
+                        <p className="mt-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                            {loading ? '—' : `${completedCalls.toLocaleString()} (${completionRate}%)`}
                         </p>
-                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
                             <div
                                 className="h-full rounded-full bg-primary-500 transition-[width] dark:bg-primary-400"
                                 style={{ width: `${completionRate}%` }}
                             />
                         </div>
                     </div>
-                </div>
-                <p className="mt-auto text-xs text-neutral-500 dark:text-neutral-400">
+                </section>
+                <p className="mt-auto text-[11px] text-neutral-500 dark:text-neutral-400">
                     {error
                         ? 'Unable to load stats right now.'
                         : stats
-                            ? `Month to date • ${stats.period.label}`
+                            ? `Updated monthly • ${stats.period.start.slice(0, 10)} → ${stats.period.end.slice(0, 10)}`
                             : 'Fetching call stats…'}
                 </p>
             </div>
