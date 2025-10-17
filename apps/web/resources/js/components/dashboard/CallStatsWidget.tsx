@@ -65,6 +65,8 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
         return Math.round((stats.calls.completed / Math.max(stats.calls.total, 1)) * 100);
     }, [stats]);
 
+    const completionProgress = Math.max(0, Math.min(100, loading ? 0 : completionRate));
+
     const minutesDisplay = stats
         ? totalMinutes > 0
             ? totalMinutes.toLocaleString()
@@ -113,8 +115,8 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
                         </p>
                         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
                             <div
-                                className="h-full rounded-full bg-primary-500 transition-[width] dark:bg-primary-400"
-                                style={{ width: `${completionRate}%` }}
+                                className="h-full rounded-full bg-blue-500 transition-[width] dark:bg-blue-400"
+                                style={{ width: `${completionProgress}%` }}
                             />
                         </div>
                     </div>
