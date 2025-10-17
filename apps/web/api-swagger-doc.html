@@ -145,7 +145,33 @@ const spec = {
         "summary": "Lead Stats (Month-to-date)",
         "description": "Returns month-to-date lead totals, status breakdown, and comparisons against call volume.",
         "security": [{"SanctumAuth": []}],
-        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"period": {"type": "object","properties": {"label": {"type": "string"},"start": {"type": "string"},"end": {"type": "string"}}},"leads": {"type": "object","properties": {"total": {"type": "integer"},"unique_callers": {"type": "integer"},"by_status": {"type": "object","properties": {"new": {"type": "integer"},"contacted": {"type": "integer"},"qualified": {"type": "integer"},"waitlist": {"type": "integer"},"rejected": {"type": "integer"}}}}},"calls": {"type": "object","properties": {"total": {"type": "integer"},"completed": {"type": "integer"}}},"comparisons": {"type": "object","properties": {"capture_rate_pct": {"type": "integer","nullable": true},"call_gap": {"type": "integer"}}}}}}}}}
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"period": {"type": "object","properties": {"label": {"type": "string"},"start": {"type": "string"},"end": {"type": "string"}}},"leads": {"type": "object","properties": {"total": {"type": "integer"},"unique_callers": {"type": "integer"},"by_status": {"type": "object","properties": {"new": {"type": "integer"},"contacted": {"type": "integer"},"qualified": {"type": "integer"},"waitlist": {"type": "integer"},"rejected": {"type": "integer"}}}}},"calls": {"type": "object","properties": {"total": {"type": "integer"},"completed": {"type": "integer"}}},"viewings": {"type": "object","properties": {"total": {"type": "integer"},"scheduled": {"type": "integer"},"cancelled": {"type": "integer"}}},"comparisons": {"type": "object","properties": {"capture_rate_pct": {"type": "integer","nullable": true},"call_gap": {"type": "integer"}}}}}}}}}
+      }
+    },
+    "/v1/viewings/stats": {
+      "get": {
+        "tags": ["Sanctum v1"],
+        "summary": "Viewing Stats (Month-to-date)",
+        "description": "Returns month-to-date viewing totals, scheduled counts, and cancellations for the authenticated group.",
+        "security": [{"SanctumAuth": []}],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"period": {"type": "object","properties": {"label": {"type": "string"},"start": {"type": "string"},"end": {"type": "string"}}},"viewings": {"type": "object","properties": {"total": {"type": "integer"},"scheduled": {"type": "integer"},"cancelled": {"type": "integer"}}}}}}}}}
+      }
+    },
+    "/v1/notification-preferences": {
+      "get": {
+        "tags": ["Sanctum v1"],
+        "summary": "Notification preferences",
+        "description": "Returns available notification channels and the caller's current subscriptions.",
+        "security": [{"SanctumAuth": []}],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"channels": {"type": "array","items": {"type": "object","properties": {"key": {"type": "string"},"label": {"type": "string"},"description": {"type": "string"}}}},"subscriptions": {"type": "array","items": {"type": "string"}}}}}}}}
+      },
+      "put": {
+        "tags": ["Sanctum v1"],
+        "summary": "Update notification preferences",
+        "description": "Replaces the caller's email notification subscriptions with the supplied channel keys.",
+        "security": [{"SanctumAuth": []}],
+        "requestBody": {"required": true,"content": {"application/json": {"schema": {"type": "object","properties": {"channels": {"type": "array","items": {"type": "string"}}}}}}},
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"subscriptions": {"type": "array","items": {"type": "string"}}}}}}},"422": {"$ref": "#/components/responses/ValidationError"}}
       }
     },
     "/listings/by-number": {
@@ -175,6 +201,68 @@ const spec = {
         "security": [{"ApiTokenAuth": []}],
         "requestBody": {"required": true,"content": {"application/json": {"schema": {"type": "object","required": ["slot_id","name","phone"],"properties": {"slot_id": {"type": "integer"},"name": {"type": "string"},"phone": {"type": "string"},"email": {"type": "string","nullable": true}}},"examples": {"example": {"value": {"slot_id": 101,"name": "Jane Smith","phone": "+353861112223","email": "jane@example.com"}}}}}},
         "responses": {"201": {"description": "Created","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"409": {"$ref": "#/components/responses/Conflict"},"422": {"$ref": "#/components/responses/ValidationError"}}
+      }
+    },
+    "/appointments/next": {
+      "get": {
+        "tags": ["Token"],
+        "summary": "Next available appointment",
+        "description": "Returns the next available viewing slot for a listing; accepts optional `listing_id` filter.",
+        "security": [{"ApiTokenAuth": []}],
+        "parameters": [
+          {"name": "listing_id","in": "query","required": false,"schema": {"type": "integer"}}
+        ],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"404": {"$ref": "#/components/responses/NotFound"}}
+      }
+    },
+    "/appointments": {
+      "post": {
+        "tags": ["Token"],
+        "summary": "Create appointment",
+        "description": "Books a viewing/appointment for a slot and returns the created resource.",
+        "security": [{"ApiTokenAuth": []}],
+        "requestBody": {"required": true,"content": {"application/json": {"schema": {"type": "object","required": ["viewing_slot_id","name","phone"],"properties": {"viewing_slot_id": {"type": "integer"},"name": {"type": "string"},"phone": {"type": "string"},"email": {"type": "string","nullable": true}}}}}},
+        "responses": {"201": {"description": "Created","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"422": {"$ref": "#/components/responses/ValidationError"}}
+      }
+    },
+    "/appointments/{appointment}": {
+      "get": {
+        "tags": ["Token"],
+        "summary": "Retrieve appointment",
+        "description": "Fetches appointment details by ID.",
+        "security": [{"ApiTokenAuth": []}],
+        "parameters": [{"name": "appointment","in": "path","required": true,"schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"404": {"$ref": "#/components/responses/NotFound"}}
+      },
+      "patch": {
+        "tags": ["Token"],
+        "summary": "Update appointment",
+        "description": "Reschedules or updates contact details for an appointment.",
+        "security": [{"ApiTokenAuth": []}],
+        "parameters": [{"name": "appointment","in": "path","required": true,"schema": {"type": "integer"}}],
+        "requestBody": {"required": true,"content": {"application/json": {"schema": {"type": "object","properties": {"viewing_slot_id": {"type": "integer","nullable": true},"name": {"type": "string","nullable": true},"phone": {"type": "string","nullable": true},"email": {"type": "string","nullable": true}}}}}},
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"404": {"$ref": "#/components/responses/NotFound"},"422": {"$ref": "#/components/responses/ValidationError"}}
+      },
+      "delete": {
+        "tags": ["Token"],
+        "summary": "Cancel appointment",
+        "description": "Cancels an appointment and frees the slot.",
+        "security": [{"ApiTokenAuth": []}],
+        "parameters": [{"name": "appointment","in": "path","required": true,"schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"404": {"$ref": "#/components/responses/NotFound"}}
+      }
+    },
+    "/appointments/lookup": {
+      "get": {
+        "tags": ["Token"],
+        "summary": "Find appointment by phone",
+        "description": "Looks up the most recent appointment for a caller phone; optional `listing_id` narrows the search.",
+        "security": [{"ApiTokenAuth": []}],
+        "parameters": [
+          {"name": "phone","in": "query","required": true,"schema": {"type": "string"}},
+          {"name": "listing_id","in": "query","required": false,"schema": {"type": "integer"}}
+        ],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","additionalProperties": true}}}},"404": {"$ref": "#/components/responses/NotFound"}}
       }
     },
     "/calls/start": {
