@@ -40,7 +40,11 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
 Route::middleware('api_token')->group(function () {
     Route::get('/listings/by-number', [ListingController::class, 'byNumber']);
     Route::get('/viewing-slots', [ViewingSlotController::class, 'index']);
+    Route::get('/appointments/next', [ViewingSlotController::class, 'nextAvailable']);
     Route::post('/viewings', [ViewingController::class, 'store']);
+    Route::post('/appointments', [ViewingController::class, 'store']);
+    Route::patch('/appointments/{viewing}', [ViewingController::class, 'update']);
+    Route::delete('/appointments/{viewing}', [ViewingController::class, 'destroy']);
     // Called by the orchestrator (server-to-server)
     Route::post('/calls/start', [CallEventsController::class, 'start']);
     Route::post('/calls/end',   [CallEventsController::class, 'end']);

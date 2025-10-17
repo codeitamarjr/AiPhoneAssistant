@@ -172,7 +172,7 @@ class ViewingWebController extends Controller
         }
 
         $slot->refresh();
-        $this->syncSlotSchedule($slot);
+        $slot->refreshSchedule();
 
         return redirect()
             ->route('appointments.index')
@@ -249,10 +249,8 @@ class ViewingWebController extends Controller
                 'scheduled_at' => $scheduledAt,
             ]);
 
-            if ($slot->mode === ViewingSlot::MODE_STAGGERED) {
-                $slot->refresh();
-                $this->syncSlotSchedule($slot);
-            }
+            $slot->refresh();
+            $slot->refreshSchedule();
         });
 
         return redirect()
@@ -277,7 +275,7 @@ class ViewingWebController extends Controller
             if ($slot && $slot->booked > 0) {
                 $slot->decrement('booked');
                 $slot->refresh();
-                $this->syncSlotSchedule($slot);
+                $slot->refreshSchedule();
             }
         });
 
@@ -308,44 +306,6 @@ class ViewingWebController extends Controller
             403,
             'You do not have access to this viewing slot.'
         );
-    }
-
-    private function syncSlotSchedule(ViewingSlot $slot): void
-    {
-        $viewings = $slot->viewings()
-            ->orderBy('created_at')
-            ->get();
-
-        if ($viewings->isEmpty()) {
-            return;
-        }
-
-        if ($slot->mode === ViewingSlot::MODE_STAGGERED && $slot->slot_interval_minutes) {
-            $start = $slot->start_at?->copy();
-            $interval = $slot->slot_interval_minutes;
-
-            if (!$start) {
-                foreach ($viewings as $viewing) {
-                    if ($viewing->scheduled_at !== null) {
-                        $viewing->forceFill(['scheduled_at' => null])->saveQuietly();
-                    }
-                }
-                return;
-            }
-
-            foreach ($viewings as $index => $viewing) {
-                $scheduled = $start->copy()->addMinutes($interval * $index);
-                if (!$viewing->scheduled_at || !$viewing->scheduled_at->equalTo($scheduled)) {
-                    $viewing->forceFill(['scheduled_at' => $scheduled])->saveQuietly();
-                }
-            }
-        } else {
-            foreach ($viewings as $viewing) {
-                if ($viewing->scheduled_at !== null) {
-                    $viewing->forceFill(['scheduled_at' => null])->saveQuietly();
-                }
-            }
-        }
     }
 
     private function assertViewingBelongsToGroup(Viewing $viewing, int $groupId): void
