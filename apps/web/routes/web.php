@@ -13,6 +13,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
     Route::get('/onboarding', fn() => Inertia::render('Onboarding/OnboardingWizard'))
         ->name('onboarding');
+    Route::get('/support/user-manual', fn () => Inertia::render('Support/UserManual'))
+        ->name('support.user-manual');
     Route::get('/calls', [\App\Http\Controllers\CallLogWebController::class, 'index'])->name('calls.index');
 
     Route::get('/listings',               [\App\Http\Controllers\ListingWebController::class, 'index'])->name('listings.index');
