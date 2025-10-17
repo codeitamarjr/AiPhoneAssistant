@@ -51,6 +51,8 @@ class ViewingWebController extends Controller
                     'capacity' => $slot->capacity,
                     'booked' => $slot->booked,
                     'remaining' => max(0, $slot->capacity - $slot->booked),
+                    'mode' => $slot->mode,
+                    'slot_interval_minutes' => $slot->slot_interval_minutes,
                     'listing' => [
                         'id' => $slot->listing->id,
                         'title' => $slot->listing->title,
@@ -63,6 +65,7 @@ class ViewingWebController extends Controller
                             'phone' => $viewing->phone,
                             'email' => $viewing->email,
                             'created_at' => optional($viewing->created_at)?->toIso8601String(),
+                            'scheduled_at' => optional($viewing->scheduled_at)?->toIso8601String(),
                         ])
                         ->values()
                         ->all(),
@@ -78,6 +81,8 @@ class ViewingWebController extends Controller
             'defaults' => [
                 'start_at' => Carbon::now()->addDay()->startOfHour()->toIso8601String(),
                 'capacity' => 4,
+                'mode' => ViewingSlot::MODE_OPEN,
+                'slot_interval_minutes' => 15,
             ],
             'meta' => [
                 'now' => Carbon::now()->toIso8601String(),
@@ -90,6 +95,8 @@ class ViewingWebController extends Controller
     {
         $groupId = $this->requireGroupId($request);
 
+        $modeInput = $request->input('mode');
+
         $data = $request->validate([
             'listing_id' => [
                 'required',
@@ -98,12 +105,24 @@ class ViewingWebController extends Controller
             ],
             'start_at' => ['required', 'date', 'after:now'],
             'capacity' => ['required', 'integer', 'min:1', 'max:50'],
+            'mode' => ['required', Rule::in([ViewingSlot::MODE_OPEN, ViewingSlot::MODE_STAGGERED])],
+            'slot_interval_minutes' => [
+                'nullable',
+                'integer',
+                'min:5',
+                'max:240',
+                Rule::requiredIf($modeInput === ViewingSlot::MODE_STAGGERED),
+            ],
         ]);
 
         ViewingSlot::create([
             'listing_id' => (int) $data['listing_id'],
             'start_at' => Carbon::parse($data['start_at']),
             'capacity' => (int) $data['capacity'],
+            'mode' => $data['mode'],
+            'slot_interval_minutes' => $data['mode'] === ViewingSlot::MODE_STAGGERED
+                ? (int) $data['slot_interval_minutes']
+                : null,
         ]);
 
         return redirect()
@@ -118,6 +137,7 @@ class ViewingWebController extends Controller
         $this->assertSlotBelongsToGroup($slot, $groupId);
 
         $minCapacity = max(1, $slot->booked);
+        $modeInput = $request->input('mode', $slot->mode);
 
         $data = $request->validate([
             'listing_id' => [
@@ -127,17 +147,32 @@ class ViewingWebController extends Controller
             ],
             'start_at' => ['required', 'date'],
             'capacity' => ['required', 'integer', 'min:' . $minCapacity, 'max:50'],
+            'mode' => ['required', Rule::in([ViewingSlot::MODE_OPEN, ViewingSlot::MODE_STAGGERED])],
+            'slot_interval_minutes' => [
+                'nullable',
+                'integer',
+                'min:5',
+                'max:240',
+                Rule::requiredIf($modeInput === ViewingSlot::MODE_STAGGERED),
+            ],
         ]);
 
         $slot->update([
             'listing_id' => (int) $data['listing_id'],
             'start_at' => Carbon::parse($data['start_at']),
             'capacity' => (int) $data['capacity'],
+            'mode' => $data['mode'],
+            'slot_interval_minutes' => $data['mode'] === ViewingSlot::MODE_STAGGERED
+                ? (int) $data['slot_interval_minutes']
+                : null,
         ]);
 
         if ($slot->booked > $slot->capacity) {
-            $slot->update(['booked' => $slot->capacity]);
+            $slot->forceFill(['booked' => $slot->capacity])->save();
         }
+
+        $slot->refresh();
+        $this->syncSlotSchedule($slot);
 
         return redirect()
             ->route('appointments.index')
@@ -193,6 +228,16 @@ class ViewingWebController extends Controller
                 ]);
             }
 
+            $position = $slot->booked;
+            $scheduledAt = null;
+
+            if ($slot->mode === ViewingSlot::MODE_STAGGERED && $slot->slot_interval_minutes) {
+                $start = $slot->start_at?->copy();
+                if ($start) {
+                    $scheduledAt = $start->addMinutes($slot->slot_interval_minutes * $position);
+                }
+            }
+
             $slot->increment('booked');
 
             Viewing::create([
@@ -201,7 +246,13 @@ class ViewingWebController extends Controller
                 'name' => $data['name'],
                 'phone' => $data['phone'],
                 'email' => $data['email'] ?? null,
+                'scheduled_at' => $scheduledAt,
             ]);
+
+            if ($slot->mode === ViewingSlot::MODE_STAGGERED) {
+                $slot->refresh();
+                $this->syncSlotSchedule($slot);
+            }
         });
 
         return redirect()
@@ -221,11 +272,13 @@ class ViewingWebController extends Controller
                 ->lockForUpdate()
                 ->first();
 
+            $viewing->delete();
+
             if ($slot && $slot->booked > 0) {
                 $slot->decrement('booked');
+                $slot->refresh();
+                $this->syncSlotSchedule($slot);
             }
-
-            $viewing->delete();
         });
 
         return redirect()
@@ -255,6 +308,44 @@ class ViewingWebController extends Controller
             403,
             'You do not have access to this viewing slot.'
         );
+    }
+
+    private function syncSlotSchedule(ViewingSlot $slot): void
+    {
+        $viewings = $slot->viewings()
+            ->orderBy('created_at')
+            ->get();
+
+        if ($viewings->isEmpty()) {
+            return;
+        }
+
+        if ($slot->mode === ViewingSlot::MODE_STAGGERED && $slot->slot_interval_minutes) {
+            $start = $slot->start_at?->copy();
+            $interval = $slot->slot_interval_minutes;
+
+            if (!$start) {
+                foreach ($viewings as $viewing) {
+                    if ($viewing->scheduled_at !== null) {
+                        $viewing->forceFill(['scheduled_at' => null])->saveQuietly();
+                    }
+                }
+                return;
+            }
+
+            foreach ($viewings as $index => $viewing) {
+                $scheduled = $start->copy()->addMinutes($interval * $index);
+                if (!$viewing->scheduled_at || !$viewing->scheduled_at->equalTo($scheduled)) {
+                    $viewing->forceFill(['scheduled_at' => $scheduled])->saveQuietly();
+                }
+            }
+        } else {
+            foreach ($viewings as $viewing) {
+                if ($viewing->scheduled_at !== null) {
+                    $viewing->forceFill(['scheduled_at' => null])->saveQuietly();
+                }
+            }
+        }
     }
 
     private function assertViewingBelongsToGroup(Viewing $viewing, int $groupId): void

@@ -41,6 +41,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Appointments', href: '/appointments' },
 ];
 
+type SlotMode = 'open' | 'staggered';
+
 type ListingOption = {
     id: number;
     title: string;
@@ -54,6 +56,7 @@ type Booking = {
     phone: string;
     email?: string | null;
     created_at?: string | null;
+    scheduled_at?: string | null;
 };
 
 type Slot = {
@@ -62,6 +65,8 @@ type Slot = {
     capacity: number;
     booked: number;
     remaining: number;
+    mode: SlotMode;
+    slot_interval_minutes?: number | null;
     listing: ListingOption;
     bookings: Booking[];
 };
@@ -69,6 +74,8 @@ type Slot = {
 type Defaults = {
     start_at?: string | null;
     capacity?: number | null;
+    mode?: SlotMode;
+    slot_interval_minutes?: number | null;
 };
 
 type Meta = {
@@ -87,6 +94,8 @@ type SlotFormData = {
     listing_id: string;
     start_at: string;
     capacity: string;
+    mode: SlotMode;
+    slot_interval_minutes: string;
 };
 
 type BookingFormData = {
@@ -133,8 +142,36 @@ const listingSummary = (listing: ListingOption): string => {
     return parts.join(', ');
 };
 
+const minutesLabel = (value: number): string =>
+    `${value} minute${value === 1 ? '' : 's'}`;
+
+const computeScheduledDate = (slot: Slot, position: number): Date | null => {
+    if (
+        slot.mode !== 'staggered' ||
+        !slot.slot_interval_minutes ||
+        !slot.start_at
+    ) {
+        return null;
+    }
+
+    const start = new Date(slot.start_at);
+    if (Number.isNaN(start.getTime())) {
+        return null;
+    }
+
+    return new Date(
+        start.getTime() + slot.slot_interval_minutes * position * 60000,
+    );
+};
+
+const nextScheduledDate = (slot: Slot): Date | null =>
+    computeScheduledDate(slot, slot.bookings.length);
+
 const BookingRow = ({ booking }: { booking: Booking }) => {
     const cancelForm = useForm({});
+    const scheduledLabel = booking.scheduled_at
+        ? formatDateTime(booking.scheduled_at)
+        : null;
 
     const handleCancel = () => {
         if (!confirm('Cancel this appointment?')) {
@@ -150,6 +187,11 @@ const BookingRow = ({ booking }: { booking: Booking }) => {
         <li className="flex items-start justify-between gap-4 px-4 py-3 text-sm">
             <div className="space-y-1">
                 <p className="font-medium text-foreground">{booking.name}</p>
+                {scheduledLabel && (
+                    <p className="text-xs text-muted-foreground">
+                        Scheduled for {scheduledLabel}
+                    </p>
+                )}
                 <p className="text-muted-foreground space-x-2">
                     <span>{booking.phone}</span>
                     {booking.email && (
@@ -195,6 +237,12 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
     const isFull = remaining <= 0;
     const startsAt = slot.start_at ? new Date(slot.start_at) : null;
     const isPast = startsAt ? startsAt.getTime() < now.getTime() : false;
+    const isStaggered = slot.mode === 'staggered';
+    const intervalMinutes = slot.slot_interval_minutes ?? 0;
+    const modeLabel = isStaggered && intervalMinutes
+        ? `Timed visits • ${minutesLabel(intervalMinutes)}`
+        : 'Open arrival (group viewing)';
+    const nextAppointmentDate = nextScheduledDate(slot);
 
     const [editOpen, setEditOpen] = useState(false);
 
@@ -202,6 +250,10 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
         listing_id: String(slot.listing.id),
         start_at: toDateTimeLocal(slot.start_at),
         capacity: String(slot.capacity),
+        mode: slot.mode,
+        slot_interval_minutes: slot.slot_interval_minutes
+            ? String(slot.slot_interval_minutes)
+            : '15',
     });
     const {
         data: editData,
@@ -217,15 +269,30 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
             listing_id: String(slot.listing.id),
             start_at: toDateTimeLocal(slot.start_at),
             capacity: String(slot.capacity),
+            mode: slot.mode,
+            slot_interval_minutes: slot.slot_interval_minutes
+                ? String(slot.slot_interval_minutes)
+                : '15',
         });
-    }, [slot.listing.id, slot.start_at, slot.capacity, setEditData]);
+    }, [slot.listing.id, slot.start_at, slot.capacity, slot.mode, slot.slot_interval_minutes, setEditData]);
 
     const handleUpdate = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
+        editForm.transform((data) => ({
+            ...data,
+            slot_interval_minutes:
+                data.mode === 'staggered'
+                    ? Number(data.slot_interval_minutes || 0)
+                    : null,
+        }));
+
         putSlotUpdate(`/appointments/slots/${slot.id}`, {
             preserveScroll: true,
             onSuccess: () => setEditOpen(false),
+            onFinish: () => {
+                editForm.transform((data) => data);
+            },
         });
     };
 
@@ -265,12 +332,25 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
                                   } left`}
                         </Badge>
                     )}
+                    <Badge variant="outline">
+                        {isStaggered && intervalMinutes
+                            ? `Every ${intervalMinutes} min`
+                            : 'Open arrival'}
+                    </Badge>
                 </div>
                 <CardDescription>
                     {formatDateTime(slot.start_at)}
                     {listingSummary(slot.listing) && (
                         <span className="mt-1 block text-xs">
                             {listingSummary(slot.listing)}
+                        </span>
+                    )}
+                    <span className="mt-2 block text-xs text-muted-foreground">
+                        {modeLabel}
+                    </span>
+                    {isStaggered && nextAppointmentDate && remaining > 0 && (
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                            Next opening at {formatDateTime(nextAppointmentDate.toISOString())}
                         </span>
                     )}
                 </CardDescription>
@@ -295,6 +375,14 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
                             {remaining}
                         </span>
                     </p>
+                    {isStaggered && intervalMinutes > 0 && (
+                        <p>
+                            Interval{' '}
+                            <span className="font-medium text-foreground">
+                                {minutesLabel(intervalMinutes)}
+                            </span>
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-3">
@@ -326,8 +414,8 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
                         <DialogHeader>
                             <DialogTitle>Edit viewing slot</DialogTitle>
                             <DialogDescription>
-                                Update the associated listing, start time, or
-                                capacity.
+                                Update the associated listing, start time,
+                                attendance style, or capacity.
                             </DialogDescription>
                         </DialogHeader>
 
@@ -410,6 +498,84 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
                                 <InputError message={editErrors.capacity} />
                             </div>
 
+                            <div className="space-y-2">
+                                <Label htmlFor={`edit-mode-${slot.id}`}>
+                                    Attendance style
+                                </Label>
+                                <Select
+                                    value={editData.mode}
+                                    onValueChange={(value) => {
+                                        const nextMode = value as SlotMode;
+                                        setEditData('mode', nextMode);
+                                        if (
+                                            nextMode === 'staggered' &&
+                                            !editData.slot_interval_minutes
+                                        ) {
+                                            setEditData(
+                                                'slot_interval_minutes',
+                                                slot.slot_interval_minutes
+                                                    ? String(
+                                                          slot.slot_interval_minutes,
+                                                      )
+                                                    : '15',
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger
+                                        id={`edit-mode-${slot.id}`}
+                                        aria-invalid={Boolean(
+                                            editErrors.mode,
+                                        )}
+                                    >
+                                        <SelectValue placeholder="Choose attendance style" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="open">
+                                            Open arrival (everyone together)
+                                        </SelectItem>
+                                        <SelectItem value="staggered">
+                                            Timed appointments
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={editErrors.mode} />
+                            </div>
+
+                            {editData.mode === 'staggered' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor={`edit-interval-${slot.id}`}>
+                                        Slot length (minutes)
+                                    </Label>
+                                    <Input
+                                        id={`edit-interval-${slot.id}`}
+                                        type="number"
+                                        min={5}
+                                        max={240}
+                                        step={5}
+                                        value={editData.slot_interval_minutes}
+                                        onChange={(event) =>
+                                            setEditData(
+                                                'slot_interval_minutes',
+                                                event.currentTarget.value,
+                                            )
+                                        }
+                                        aria-invalid={Boolean(
+                                            editErrors.slot_interval_minutes,
+                                        )}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Each booking will be spaced by this
+                                        amount.
+                                    </p>
+                                    <InputError
+                                        message={
+                                            editErrors.slot_interval_minutes
+                                        }
+                                    />
+                                </div>
+                            )}
+
                             {editErrors.slot && (
                                 <InputError message={editErrors.slot} />
                             )}
@@ -435,7 +601,7 @@ const SlotCard = ({ slot, listings, now, onSelectSlot }: SlotCardProps) => {
                     size="sm"
                     type="button"
                     onClick={handleSelectSlot}
-                    disabled={isPast}
+                    disabled={isPast || isFull}
                 >
                     Add booking
                 </Button>
@@ -517,11 +683,17 @@ export default function AppointmentsIndex({
     const fallbackStart =
         defaults.start_at ?? meta?.now ?? new Date().toISOString();
     const fallbackCapacity = String(defaults.capacity ?? 4);
+    const fallbackMode: SlotMode = defaults.mode ?? 'open';
+    const fallbackInterval = defaults.slot_interval_minutes != null
+        ? String(defaults.slot_interval_minutes)
+        : '15';
 
     const slotForm = useForm<SlotFormData>({
         listing_id: fallbackListingId,
         start_at: toDateTimeLocal(fallbackStart),
         capacity: fallbackCapacity,
+        mode: fallbackMode,
+        slot_interval_minutes: fallbackInterval,
     });
     const {
         data: slotData,
@@ -596,8 +768,23 @@ export default function AppointmentsIndex({
         [slots, bookingData.viewing_slot_id],
     );
 
+    const nextSelectedSlotDate = useMemo(() => {
+        if (!selectedBookingSlot) {
+            return null;
+        }
+        return nextScheduledDate(selectedBookingSlot);
+    }, [selectedBookingSlot]);
+
     const submitSlot = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
+        slotForm.transform((data) => ({
+            ...data,
+            slot_interval_minutes:
+                data.mode === 'staggered'
+                    ? Number(data.slot_interval_minutes || 0)
+                    : null,
+        }));
 
         postSlot('/appointments/slots', {
             preserveScroll: true,
@@ -613,6 +800,11 @@ export default function AppointmentsIndex({
                 );
                 setSlotData('listing_id', fallbackListingId);
                 setSlotData('capacity', fallbackCapacity);
+                setSlotData('mode', fallbackMode);
+                setSlotData('slot_interval_minutes', fallbackInterval);
+            },
+            onFinish: () => {
+                slotForm.transform((data) => data);
             },
         });
     };
@@ -761,6 +953,81 @@ export default function AppointmentsIndex({
                                     />
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label htmlFor="slot-mode">
+                                        Attendance style
+                                    </Label>
+                                    <Select
+                                        value={slotData.mode}
+                                        onValueChange={(value) => {
+                                            const nextMode = value as SlotMode;
+                                            setSlotData('mode', nextMode);
+                                            if (
+                                                nextMode === 'staggered' &&
+                                                !slotData.slot_interval_minutes
+                                            ) {
+                                                setSlotData(
+                                                    'slot_interval_minutes',
+                                                    fallbackInterval,
+                                                );
+                                            }
+                                        }}
+                                        disabled={!listings.length}
+                                    >
+                                        <SelectTrigger
+                                            id="slot-mode"
+                                            aria-invalid={Boolean(
+                                                slotErrors.mode,
+                                            )}
+                                        >
+                                            <SelectValue placeholder="Choose attendance style" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="open">
+                                                Open arrival (everyone together)
+                                            </SelectItem>
+                                            <SelectItem value="staggered">
+                                                Timed appointments
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={slotErrors.mode} />
+                                </div>
+
+                                {slotData.mode === 'staggered' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="slot-interval">
+                                            Slot length (minutes)
+                                        </Label>
+                                        <Input
+                                            id="slot-interval"
+                                            type="number"
+                                            min={5}
+                                            max={240}
+                                            step={5}
+                                            value={slotData.slot_interval_minutes}
+                                            onChange={(event) =>
+                                                setSlotData(
+                                                    'slot_interval_minutes',
+                                                    event.currentTarget.value,
+                                                )
+                                            }
+                                            aria-invalid={Boolean(
+                                                slotErrors.slot_interval_minutes,
+                                            )}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Each appointment will be spaced by
+                                            this number of minutes.
+                                        </p>
+                                        <InputError
+                                            message={
+                                                slotErrors.slot_interval_minutes
+                                            }
+                                        />
+                                    </div>
+                                )}
+
                                 <Button
                                     type="submit"
                                     disabled={
@@ -827,7 +1094,7 @@ export default function AppointmentsIndex({
                                             <SelectContent>
                                                 {availableSlots.map(
                                                     (slot) => (
-                                                        <SelectItem
+                                                    <SelectItem
                                                             key={
                                                                 slot.id
                                                             }
@@ -842,6 +1109,11 @@ export default function AppointmentsIndex({
                                                             {formatDateTime(
                                                                 slot.start_at,
                                                             )}
+                                                            {slot.mode === 'staggered' &&
+                                                            slot.slot_interval_minutes
+                                                                ? ` • every ${slot.slot_interval_minutes} min`
+                                                                : ' • open arrival'}
+                                                            {` • ${slot.remaining} left`}
                                                         </SelectItem>
                                                     ),
                                                 )}
@@ -932,16 +1204,31 @@ export default function AppointmentsIndex({
                                                 }
                                             </span>{' '}
                                             for{' '}
-                                            {formatDateTime(
-                                                selectedBookingSlot.start_at,
-                                            )}
+                                            {selectedBookingSlot.mode ===
+                                            'staggered'
+                                                ? formatDateTime(
+                                                      (nextSelectedSlotDate
+                                                          ?? null)?.toISOString() ??
+                                                          selectedBookingSlot.start_at,
+                                                  )
+                                                : formatDateTime(
+                                                      selectedBookingSlot.start_at,
+                                                  )}
+                                            {selectedBookingSlot.mode ===
+                                            'staggered' &&
+                                            selectedBookingSlot.slot_interval_minutes
+                                                ? ` • ${minutesLabel(selectedBookingSlot.slot_interval_minutes)} per visit`
+                                                : ' • open arrival'}
                                             .
                                         </p>
                                     )}
 
                                     <Button
                                         type="submit"
-                                        disabled={bookingProcessing}
+                                        disabled={
+                                            bookingProcessing ||
+                                            !bookingData.viewing_slot_id
+                                        }
                                     >
                                         Add booking
                                     </Button>
