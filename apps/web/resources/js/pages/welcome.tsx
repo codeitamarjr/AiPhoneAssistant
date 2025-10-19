@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 const bgImage = '/images/hero-light-waves.svg';
 const logoImage = '/images/logo-mark.png';
 
+const metaDescription =
+    'AI Phone Assistant answers every property enquiry instantly, qualifies leads, and syncs calls to your CRM so your team never misses an opportunity.';
+
 const features = [
     {
         title: 'Answer every lead 24/7',
@@ -30,7 +33,9 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="AI Phone Assistant" />
+            <Head title="AI Phone Assistant">
+                <meta name="description" content={metaDescription} />
+            </Head>
             <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#fdf6ff] via-[#f5fcff] to-[#fff8f0] text-neutral-900 dark:from-[#050810] dark:via-[#0a1b33] dark:to-[#050810] dark:text-neutral-100">
                 <div className="pointer-events-none absolute inset-0 -z-20 h-full w-full">
                     <div className="absolute inset-0 h-full w-full bg-top bg-no-repeat bg-funky-pattern opacity-70 dark:opacity-40" />
