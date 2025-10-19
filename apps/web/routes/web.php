@@ -9,6 +9,12 @@ Route::get('/', function () {
 
 Route::get('/user-manual', fn () => Inertia::render('Support/UserManualPublic'))
     ->name('manual.public');
+Route::get('/privacy-policy', fn () => Inertia::render('Legal/PrivacyPolicy'))
+    ->name('legal.privacy');
+Route::get('/cookie-policy', fn () => Inertia::render('Legal/CookiePolicy'))
+    ->name('legal.cookies');
+Route::get('/terms-of-use', fn () => Inertia::render('Legal/TermsOfUse'))
+    ->name('legal.terms');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {

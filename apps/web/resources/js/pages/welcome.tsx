@@ -30,6 +30,12 @@ export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
     const heroCtaHref = useMemo(() => (auth?.user ? dashboard() : login()), [auth]);
     const heroCtaLabel = auth?.user ? 'Go to dashboard' : 'Log in to get started';
+    const legalLinks = [
+        { label: 'User manual', href: manualRoutes.public() },
+        { label: 'Privacy policy', href: '/privacy-policy' },
+        { label: 'Cookie policy', href: '/cookie-policy' },
+        { label: 'Terms of use', href: '/terms-of-use' },
+    ];
 
     return (
         <>
@@ -63,9 +69,6 @@ export default function Welcome() {
                     </div>
 
                     <nav className="hidden items-center gap-4 text-sm text-neutral-600 dark:text-neutral-300 md:flex">
-                        <Button asChild variant="ghost" className="text-neutral-700 hover:bg-neutral-900/5 dark:text-neutral-200 dark:hover:bg-neutral-100/10">
-                            <Link href={manualRoutes.public()}>User manual</Link>
-                        </Button>
                         {auth?.user ? (
                             <Button asChild variant="ghost" className="text-neutral-700 hover:bg-neutral-900/5 dark:text-neutral-200 dark:hover:bg-neutral-100/10">
                                 <Link href={dashboard()}>Dashboard</Link>
@@ -130,9 +133,15 @@ export default function Welcome() {
                 <footer className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 pb-10 text-xs text-neutral-500 dark:text-neutral-400 md:px-10">
                     <p>© {new Date().getFullYear()} AI Phone Assistant. All rights reserved.</p>
                     <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-                        <Link href={manualRoutes.public()} className="text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-300">
-                            User manual
-                        </Link>
+                        {legalLinks.map((link) => (
+                            <Link
+                                key={link.label}
+                                href={link.href}
+                                className="text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-300"
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
                         <span className="hidden sm:inline">•</span>
                         <span>Enterprise-ready</span>
                         <span>•</span>
