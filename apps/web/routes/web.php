@@ -7,6 +7,9 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+Route::get('/user-manual', fn () => Inertia::render('Support/UserManualPublic'))
+    ->name('manual.public');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');

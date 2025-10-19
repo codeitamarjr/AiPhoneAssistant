@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { dashboard, login } from '@/routes';
+import { dashboard, login, manualPublic } from '@/routes';
 import { type SharedData } from '@/types';
 import { Button } from '@/components/ui/button';
 
@@ -57,6 +57,9 @@ export default function Welcome() {
                     </div>
 
                     <nav className="hidden items-center gap-4 text-sm text-neutral-600 dark:text-neutral-300 md:flex">
+                        <Button asChild variant="ghost" className="text-neutral-700 hover:bg-neutral-900/5 dark:text-neutral-200 dark:hover:bg-neutral-100/10">
+                            <Link href={manualPublic()}>User manual</Link>
+                        </Button>
                         {auth?.user ? (
                             <Button asChild variant="ghost" className="text-neutral-700 hover:bg-neutral-900/5 dark:text-neutral-200 dark:hover:bg-neutral-100/10">
                                 <Link href={dashboard()}>Dashboard</Link>
@@ -120,7 +123,11 @@ export default function Welcome() {
 
                 <footer className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 pb-10 text-xs text-neutral-500 dark:text-neutral-400 md:px-10">
                     <p>© {new Date().getFullYear()} AI Phone Assistant. All rights reserved.</p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+                        <Link href={manualPublic()} className="text-neutral-600 underline-offset-4 hover:underline dark:text-neutral-300">
+                            User manual
+                        </Link>
+                        <span className="hidden sm:inline">•</span>
                         <span>Enterprise-ready</span>
                         <span>•</span>
                         <span>Powered by Twilio & OpenAI</span>
