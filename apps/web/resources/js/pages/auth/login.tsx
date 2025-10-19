@@ -98,7 +98,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 <Label htmlFor="remember">Remember me</Label>
                             </div>
 
-                            <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-background/60 p-3">
+                            <div className="flex items-start gap-3">
                                 <input type="checkbox" name="policy_consent" className="sr-only" value="1" checked={hasConsented} readOnly required />
                                 <Checkbox
                                     id="policy_consent"
@@ -166,7 +166,13 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     <DialogHeader>
                         <DialogTitle>Accept required policies</DialogTitle>
                         <DialogDescription>
-                            As per GDPR and EU regulations, you must accept the Cookie Policy, Privacy Policy, and Terms of Use before continuing.
+                            As per GDPR and EU regulations, you must accept the <Link href="/cookie-policy" className="font-medium text-primary underline-offset-4 hover:underline">
+                                Cookie Policy
+                            </Link>, <Link href="/privacy-policy" className="font-medium text-primary underline-offset-4 hover:underline">
+                                Privacy Policy
+                            </Link>{' '}, and <Link href="/terms-of-use" className="font-medium text-primary underline-offset-4 hover:underline">
+                                Terms of Use
+                            </Link> before continuing.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
