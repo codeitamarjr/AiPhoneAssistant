@@ -8,6 +8,9 @@ import LeadsCard from '@/components/leads/LeadsCard';
 import CallStatsWidget from '@/components/dashboard/CallStatsWidget';
 import LeadStatsWidget from '@/components/dashboard/LeadStatsWidget';
 import ViewingStatsWidget from '@/components/dashboard/ViewingStatsWidget';
+import DashboardPeriodSelector from '@/components/dashboard/DashboardPeriodSelector';
+import { buildPeriodForMonth } from '@/components/dashboard/period-utils';
+import type { ReportingPeriod } from '@/components/dashboard/types';
 
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -19,15 +22,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Dashboard() {
     const [activePanel, setActivePanel] = useState<'calls' | 'leads'>('calls');
+    const [period, setPeriod] = useState<ReportingPeriod>(() => buildPeriodForMonth(new Date()));
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <DashboardPeriodSelector period={period} onChange={setPeriod} />
+                </div>
                 <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <CallStatsWidget className="h-full" />
-                    <LeadStatsWidget className="h-full" />
-                    <ViewingStatsWidget className="h-full" />
+                    <CallStatsWidget className="h-full" period={period} />
+                    <LeadStatsWidget className="h-full" period={period} />
+                    <ViewingStatsWidget className="h-full" period={period} />
                 </div>
                 {/* Calls & Leads */}
                 <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-white dark:border-sidebar-border dark:bg-neutral-950">

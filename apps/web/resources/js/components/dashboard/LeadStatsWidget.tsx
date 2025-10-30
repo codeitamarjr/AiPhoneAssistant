@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import clsx from 'clsx';
+import type { ReportingPeriod } from '@/components/dashboard/types';
 
 type LeadStatsResponse = {
     period: {
@@ -25,9 +26,10 @@ type LeadStatsResponse = {
 
 type LeadStatsWidgetProps = {
     className?: string;
+    period: ReportingPeriod;
 };
 
-export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
+export default function LeadStatsWidget({ className, period }: LeadStatsWidgetProps) {
     const [stats, setStats] = useState<LeadStatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -37,7 +39,12 @@ export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
 
         const fetchStats = async () => {
             try {
-                const { data } = await axios.get<LeadStatsResponse>('/api/v1/leads/stats');
+                const { data } = await axios.get<LeadStatsResponse>('/api/v1/leads/stats', {
+                    params: {
+                        start: period.start,
+                        end: period.end,
+                    },
+                });
                 if (!isMounted) return;
                 setStats(data);
                 setError(false);
@@ -51,6 +58,9 @@ export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
             }
         };
 
+        setLoading(true);
+        setStats(null);
+        setError(false);
         fetchStats();
         const interval = window.setInterval(fetchStats, 60000);
 
@@ -58,7 +68,7 @@ export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
             isMounted = false;
             window.clearInterval(interval);
         };
-    }, []);
+    }, [period]);
 
     const totalLeads = stats?.leads.total ?? 0;
     const uniqueCallers = stats?.leads.unique_callers ?? 0;
@@ -93,7 +103,7 @@ export default function LeadStatsWidget({ className }: LeadStatsWidgetProps) {
                         </p>
                     </div>
                     <div className="text-right text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {stats ? `${stats.period.label}` : 'Loading…'}
+                        {stats ? `${stats.period.label}` : loading ? 'Loading…' : period.label}
                     </div>
                 </header>
 

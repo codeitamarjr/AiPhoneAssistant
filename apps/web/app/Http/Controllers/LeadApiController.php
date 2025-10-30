@@ -7,14 +7,16 @@ use App\Models\CallLog;
 use App\Models\Viewing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Concerns\ResolvesPeriod;
 
 class LeadApiController extends Controller
 {
+    use ResolvesPeriod;
+
     public function stats(Request $request)
     {
         $user = $request->user();
-        $periodStart = now()->startOfMonth();
-        $periodEnd = now();
+        [$periodStart, $periodEnd, $label] = $this->resolvePeriod($request);
         $groupId = null;
         if (method_exists($user, 'currentGroupId')) {
             $groupId = $user->currentGroupId();
@@ -24,7 +26,7 @@ class LeadApiController extends Controller
 
         $scopedLeads = Lead::query()
             ->when($groupId, fn ($q) => $q->where('group_id', $groupId))
-            ->where('created_at', '>=', $periodStart);
+            ->whereBetween('created_at', [$periodStart, $periodEnd]);
 
         $totalLeads = (clone $scopedLeads)->count();
         $uniqueCallers = (clone $scopedLeads)->distinct('phone_e164')->count('phone_e164');
@@ -35,7 +37,7 @@ class LeadApiController extends Controller
 
         $scopedCalls = CallLog::query()
             ->when($groupId, fn ($q) => $q->where('group_id', $groupId))
-            ->where('created_at', '>=', $periodStart);
+            ->whereBetween('created_at', [$periodStart, $periodEnd]);
 
         $viewingStats = collect();
         if ($groupId) {
@@ -57,9 +59,9 @@ class LeadApiController extends Controller
 
         return response()->json([
             'period' => [
-                'label' => $periodStart->format('F Y'),
-                'start' => $periodStart->toISOString(),
-                'end'   => $periodEnd->toISOString(),
+                'label' => $label,
+                'start' => $periodStart->toIso8601String(),
+                'end'   => $periodEnd->toIso8601String(),
             ],
             'leads' => [
                 'total'          => $totalLeads,

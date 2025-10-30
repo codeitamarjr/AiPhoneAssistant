@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import clsx from 'clsx';
+import type { ReportingPeriod } from '@/components/dashboard/types';
 
 type CallStatsResponse = {
     period: {
@@ -17,9 +18,10 @@ type CallStatsResponse = {
 
 type CallStatsWidgetProps = {
     className?: string;
+    period: ReportingPeriod;
 };
 
-export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
+export default function CallStatsWidget({ className, period }: CallStatsWidgetProps) {
     const [stats, setStats] = useState<CallStatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -29,7 +31,12 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
 
         const fetchStats = async () => {
             try {
-                const { data } = await axios.get<CallStatsResponse>('/api/v1/calls/stats');
+                const { data } = await axios.get<CallStatsResponse>('/api/v1/calls/stats', {
+                    params: {
+                        start: period.start,
+                        end: period.end,
+                    },
+                });
                 if (!isMounted) return;
                 setStats(data);
                 setError(false);
@@ -43,6 +50,9 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
             }
         };
 
+        setLoading(true);
+        setStats(null);
+        setError(false);
         fetchStats();
         const interval = window.setInterval(fetchStats, 60000);
 
@@ -50,7 +60,7 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
             isMounted = false;
             window.clearInterval(interval);
         };
-    }, []);
+    }, [period]);
 
     const totalCalls = stats?.calls.total ?? 0;
     const completedCalls = stats?.calls.completed ?? 0;
@@ -94,7 +104,7 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
                         </p>
                     </div>
                     <div className="text-right text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {stats ? stats.period.label : 'Loading…'}
+                        {stats ? stats.period.label : loading ? 'Loading…' : period.label}
                     </div>
                 </header>
                 <section className="grid gap-3 sm:grid-cols-2">
@@ -125,7 +135,7 @@ export default function CallStatsWidget({ className }: CallStatsWidgetProps) {
                     {error
                         ? 'Unable to load stats right now.'
                         : stats
-                            ? `Updated monthly • ${stats.period.start.slice(0, 10)} → ${stats.period.end.slice(0, 10)}`
+                            ? `Updated monthly • ${stats.period.start.slice(0, 10)} to ${stats.period.end.slice(0, 10)}`
                             : 'Fetching call stats…'}
                 </p>
             </div>

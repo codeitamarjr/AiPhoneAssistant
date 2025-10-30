@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import clsx from 'clsx';
+import type { ReportingPeriod } from '@/components/dashboard/types';
 
 type ViewingStatsResponse = {
     period: {
@@ -17,9 +18,10 @@ type ViewingStatsResponse = {
 
 type ViewingStatsWidgetProps = {
     className?: string;
+    period: ReportingPeriod;
 };
 
-export default function ViewingStatsWidget({ className }: ViewingStatsWidgetProps) {
+export default function ViewingStatsWidget({ className, period }: ViewingStatsWidgetProps) {
     const [stats, setStats] = useState<ViewingStatsResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -29,7 +31,12 @@ export default function ViewingStatsWidget({ className }: ViewingStatsWidgetProp
 
         const fetchStats = async () => {
             try {
-                const { data } = await axios.get<ViewingStatsResponse>('/api/v1/viewings/stats');
+                const { data } = await axios.get<ViewingStatsResponse>('/api/v1/viewings/stats', {
+                    params: {
+                        start: period.start,
+                        end: period.end,
+                    },
+                });
                 if (!isMounted) return;
                 setStats(data);
                 setError(false);
@@ -43,6 +50,9 @@ export default function ViewingStatsWidget({ className }: ViewingStatsWidgetProp
             }
         };
 
+        setLoading(true);
+        setStats(null);
+        setError(false);
         fetchStats();
         const interval = window.setInterval(fetchStats, 60000);
 
@@ -50,7 +60,7 @@ export default function ViewingStatsWidget({ className }: ViewingStatsWidgetProp
             isMounted = false;
             window.clearInterval(interval);
         };
-    }, []);
+    }, [period]);
 
     const total = stats?.viewings.total ?? 0;
     const scheduled = stats?.viewings.scheduled ?? 0;
@@ -85,7 +95,7 @@ export default function ViewingStatsWidget({ className }: ViewingStatsWidgetProp
                         </p>
                     </div>
                     <div className="text-right text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {stats ? `${stats.period.label}` : 'Loading…'}
+                        {stats ? `${stats.period.label}` : loading ? 'Loading…' : period.label}
                     </div>
                 </header>
 

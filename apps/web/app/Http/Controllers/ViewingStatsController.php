@@ -4,14 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Viewing;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Concerns\ResolvesPeriod;
 
 class ViewingStatsController extends Controller
 {
+    use ResolvesPeriod;
+
     public function index(Request $request)
     {
         $user = $request->user();
-        $periodStart = now()->startOfMonth();
-        $periodEnd = now();
+        [$periodStart, $periodEnd, $label] = $this->resolvePeriod($request);
 
         $groupId = null;
         if (method_exists($user, 'currentGroupId')) {
@@ -23,9 +25,9 @@ class ViewingStatsController extends Controller
         if (!$groupId) {
             return response()->json([
                 'period' => [
-                    'label' => $periodStart->format('F Y'),
-                    'start' => $periodStart->toISOString(),
-                    'end'   => $periodEnd->toISOString(),
+                    'label' => $label,
+                    'start' => $periodStart->toIso8601String(),
+                    'end'   => $periodEnd->toIso8601String(),
                 ],
                 'viewings' => [
                     'total' => 0,
@@ -46,9 +48,9 @@ class ViewingStatsController extends Controller
 
         return response()->json([
             'period' => [
-                'label' => $periodStart->format('F Y'),
-                'start' => $periodStart->toISOString(),
-                'end'   => $periodEnd->toISOString(),
+                'label' => $label,
+                'start' => $periodStart->toIso8601String(),
+                'end'   => $periodEnd->toIso8601String(),
             ],
             'viewings' => [
                 'total' => $total,

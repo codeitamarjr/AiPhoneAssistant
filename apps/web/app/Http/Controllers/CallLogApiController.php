@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\CallLog;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Concerns\ResolvesPeriod;
 
 class CallLogApiController extends Controller
 {
+    use ResolvesPeriod;
+
     public function stats(Request $request)
     {
         $user = $request->user();
-        $periodStart = now()->startOfMonth();
+        [$periodStart, $periodEnd, $label] = $this->resolvePeriod($request);
+
         $scoped = CallLog::query()
             ->when(method_exists($user, 'currentGroupId'), function ($qq) use ($user) {
                 $qq->where('group_id', $user->currentGroupId());
@@ -19,7 +23,7 @@ class CallLogApiController extends Controller
                     $qq->where('group_id', $user->group_id);
                 }
             })
-            ->where('created_at', '>=', $periodStart);
+            ->whereBetween('created_at', [$periodStart, $periodEnd]);
 
         $totalCalls = (clone $scoped)->count();
         $completedCalls = (clone $scoped)->where('status', 'completed')->count();
@@ -27,9 +31,9 @@ class CallLogApiController extends Controller
 
         return response()->json([
             'period' => [
-                'label' => $periodStart->format('F Y'),
-                'start' => $periodStart->toISOString(),
-                'end'   => now()->toISOString(),
+                'label' => $label,
+                'start' => $periodStart->toIso8601String(),
+                'end'   => $periodEnd->toIso8601String(),
             ],
             'calls' => [
                 'total' => $totalCalls,
