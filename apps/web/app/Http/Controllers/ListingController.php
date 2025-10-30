@@ -246,6 +246,14 @@ class ListingController extends Controller
             ],
         ];
 
+        $contact = [
+            'name'  => $listing->escalation_contact_name,
+            'phone' => $listing->escalation_contact_phone,
+        ];
+
+        $hasContact = filled($contact['name']) || filled($contact['phone']);
+        $base['escalation_contact'] = $hasContact ? $contact : null;
+
         if ($scope === Listing::SCOPE_COLLECTION) {
             $base['collection'] = $this->presentCollectionInventory($listing, $advertisedUnits);
             return $base;

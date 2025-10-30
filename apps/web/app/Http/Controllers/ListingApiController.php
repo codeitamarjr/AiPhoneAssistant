@@ -19,6 +19,8 @@ class ListingApiController extends Controller
             ->where('start_at', '>', now())
             ->orderBy('start_at')->limit(10)->get(['id', 'start_at', 'capacity', 'booked']);
 
+        $hasContact = filled($listing->escalation_contact_name) || filled($listing->escalation_contact_phone);
+
         return [
             'id' => $listing->id,
             'title' => $listing->title ?? null,
@@ -31,6 +33,12 @@ class ListingApiController extends Controller
             'policies' => $listing->policies ?? null,   // JSON if present
             'faqs' => $faqs,
             'viewing_slots' => $slots,
+            'escalation_contact' => $hasContact
+                ? [
+                    'name' => $listing->escalation_contact_name,
+                    'phone' => $listing->escalation_contact_phone,
+                ]
+                : null,
         ];
     }
 }

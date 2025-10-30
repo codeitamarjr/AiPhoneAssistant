@@ -76,6 +76,8 @@ export type ListingPayload = {
   address: string;
   postcode: string;
   summary: string;
+  escalation_contact_name: string;
+  escalation_contact_phone: string;
   rent: string;
   deposit: string;
   available_from: string;
@@ -165,6 +167,8 @@ export default function ListingForm({
     address: defaults?.address ?? '',
     postcode: defaults?.postcode ?? '',
     summary: defaults?.summary ?? '',
+    escalation_contact_name: defaults?.escalation_contact_name ?? '',
+    escalation_contact_phone: defaults?.escalation_contact_phone ?? '',
     rent: defaults?.rent != null ? String(defaults.rent) : '',
     deposit: defaults?.deposit != null ? String(defaults.deposit) : '',
     available_from: defaults?.available_from ?? '',
@@ -289,6 +293,32 @@ export default function ListingForm({
               ))}
             </select>
             <InputError className="mt-2" message={(errors as any).phone_number_id} />
+          </div>
+
+          <div className="grid gap-4 md:max-w-2xl md:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="escalation_contact_name">Escalation contact name</Label>
+              <Input
+                id="escalation_contact_name"
+                name="escalation_contact_name"
+                value={data.escalation_contact_name}
+                onChange={onChange('escalation_contact_name')}
+                placeholder="Lettings manager"
+              />
+              <InputError className="mt-2" message={(errors as any).escalation_contact_name} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="escalation_contact_phone">Escalation contact phone</Label>
+              <Input
+                id="escalation_contact_phone"
+                name="escalation_contact_phone"
+                value={data.escalation_contact_phone}
+                onChange={onChange('escalation_contact_phone')}
+                placeholder="+353 1 555 0123"
+                autoComplete="tel"
+              />
+              <InputError className="mt-2" message={(errors as any).escalation_contact_phone} />
+            </div>
           </div>
 
           {phoneNumbers.length === 0 && (

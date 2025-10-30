@@ -118,6 +118,15 @@ Laravel CRM (logs, leads, property data)
 
 ---
 
+## ☎️ Escalation contact
+
+Listings in the CRM can now store an **escalation contact** (name + phone number) that acts as a manual fallback.
+When the orchestrator fetches listing metadata from `/api/listings/by-number` or `/v1/listings/active`, the payload
+includes an `escalation_contact` object whenever those details are present. Use this to implement hand-offs—e.g. when
+the assistant exhausts its playbook or the caller explicitly asks for a human, transfer the call to that fallback number.
+
+---
+
 ## 🧪 Testing & troubleshooting
 
 - **Local ngrok tunnel**: `npm run dev:tunneled`
@@ -151,4 +160,3 @@ Pull requests are welcome! If you’re adding new connectors or providers, follo
 ## 📝 License
 
 This project is proprietary and not distributed under an open-source license. Contact the maintainers for usage terms.
-

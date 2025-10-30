@@ -25,6 +25,8 @@ class Listing extends Model
         'address',
         'postcode',
         'summary',
+        'escalation_contact_name',
+        'escalation_contact_phone',
         'rent',
         'deposit',
         'available_from',

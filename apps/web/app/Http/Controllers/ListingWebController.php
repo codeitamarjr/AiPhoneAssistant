@@ -67,6 +67,8 @@ class ListingWebController extends Controller
                     'title' => $listing->title,
                     'address' => $listing->address,
                     'postcode' => $listing->postcode,
+                    'escalation_contact_name' => $listing->escalation_contact_name,
+                    'escalation_contact_phone' => $listing->escalation_contact_phone,
                     'rent' => $listing->rent,
                     'bedrooms' => $listing->bedrooms,
                     'bathrooms' => $listing->bathrooms,
@@ -129,6 +131,8 @@ class ListingWebController extends Controller
                 'furnished'      => true,
                 'is_current'     => true,
                 'is_published'   => false,
+                'escalation_contact_name' => '',
+                'escalation_contact_phone' => '',
                 'inventory_scope' => Listing::SCOPE_LEGACY,
                 'unit_id' => null,
                 'unit_type_id' => null,
@@ -171,6 +175,8 @@ class ListingWebController extends Controller
             'address'          => ['nullable', 'string', 'max:255'],
             'postcode'         => ['nullable', 'string', 'max:16'],
             'summary'          => ['nullable', 'string'],
+            'escalation_contact_name'  => ['nullable', 'string', 'max:190'],
+            'escalation_contact_phone' => ['nullable', 'string', 'max:32'],
 
             // Pricing & lease
             'rent'             => ['nullable', 'integer', 'min:0'],
@@ -238,6 +244,8 @@ class ListingWebController extends Controller
             'address',
             'postcode',
             'summary',
+            'escalation_contact_name',
+            'escalation_contact_phone',
             'parking',
             'heating',
             'main_photo_path',
@@ -308,6 +316,8 @@ class ListingWebController extends Controller
             'address',
             'postcode',
             'summary',
+            'escalation_contact_name',
+            'escalation_contact_phone',
             // Pricing & lease
             'rent',
             'deposit',
@@ -378,6 +388,8 @@ class ListingWebController extends Controller
             'address'          => ['nullable', 'string', 'max:255'],
             'postcode'         => ['nullable', 'string', 'max:16'],
             'summary'          => ['nullable', 'string'],
+            'escalation_contact_name'  => ['nullable', 'string', 'max:190'],
+            'escalation_contact_phone' => ['nullable', 'string', 'max:32'],
 
             // Pricing & lease
             'rent'             => ['nullable', 'integer', 'min:0'],
@@ -449,6 +461,8 @@ class ListingWebController extends Controller
             'address',
             'postcode',
             'summary',
+            'escalation_contact_name',
+            'escalation_contact_phone',
             'parking',
             'heating',
             'main_photo_path',

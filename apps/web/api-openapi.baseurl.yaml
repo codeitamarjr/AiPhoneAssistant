@@ -324,7 +324,9 @@ paths:
     get:
       tags: [Sanctum v1]
       summary: Active Listing for Group
-      description: Requires `group_id`; returns the most recent listing with FAQs and upcoming viewing slots (limit 10) or `null` if none.
+      description: >
+        Requires `group_id`; returns the most recent listing with FAQs and upcoming viewing slots (limit 10) or `null` if none.
+        The payload includes `escalation_contact` when a fallback contact name or phone is stored on the listing.
       security: [{{ SanctumAuth: [] }}]
       parameters:
         - $ref: "#/components/parameters/GroupIdParam"
@@ -385,7 +387,10 @@ paths:
     get:
       tags: [Token]
       summary: Listing by Destination Number
-      description: Looks up the listing tied to `to_e164`; returns listing object or 404 with `{message}`.
+      description: >
+        Looks up the listing tied to `to_e164`; returns listing object or 404 with `{message}`.
+        When configured, responses include `escalation_contact` with the fallback contact `name` and `phone`
+        that the orchestrator can use if automation fails.
       security: [{{ ApiTokenAuth: [] }}]
       parameters:
         - $ref: "#/components/parameters/ToE164Param"

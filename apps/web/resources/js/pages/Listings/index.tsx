@@ -14,6 +14,8 @@ type Listing = {
   title: string | null;
   address: string | null;
   postcode: string | null;
+  escalation_contact_name: string | null;
+  escalation_contact_phone: string | null;
   rent: number | null;
   bedrooms: number | null;
   bathrooms: number | null;
@@ -90,6 +92,7 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
                   <Th label="Title" onClick={() => toggleSort('title')} active={filters.sort === 'title'} order={filters.order} />
                   <th className="px-4 py-2">Address</th>
                   <th className="px-4 py-2">postcode</th>
+                  <th className="px-4 py-2">Escalation contact</th>
                   <th className="px-4 py-2">Rent</th>
                   <th className="px-4 py-2">Beds</th>
                   <th className="px-4 py-2">Baths</th>
@@ -105,6 +108,18 @@ export default function ListingsIndex({ listings, filters }: PageProps) {
                     <td className="px-4 py-2 font-medium text-nowrap">{l.title ?? '—'}</td>
                     <td className="px-4 py-2">{l.address ?? '—'}</td>
                     <td className="px-4 py-2 text-nowrap">{l.postcode ?? '—'}</td>
+                    <td className="px-4 py-2">
+                      {l.escalation_contact_name || l.escalation_contact_phone ? (
+                        <div className="flex flex-col text-sm">
+                          {l.escalation_contact_name && <span>{l.escalation_contact_name}</span>}
+                          {l.escalation_contact_phone && (
+                            <span className="text-neutral-500">{l.escalation_contact_phone}</span>
+                          )}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td className="px-4 py-2">{l.rent != null ? `€${l.rent}` : '—'}</td>
                     <td className="px-4 py-2">{l.bedrooms ?? '—'}</td>
                     <td className="px-4 py-2">{l.bathrooms ?? '—'}</td>
