@@ -46,6 +46,7 @@ class CallEventsController extends Controller
                 'caller_name' => $data['caller_name'] ?? null,
                 'started_at' => $data['started_at'] ?? now(),
                 'status'     => $data['status'] ?? 'in-progress',
+                'metered_minutes' => 0,
                 'meta'       => $data['meta'] ?? null,
             ]
         );
@@ -79,8 +80,14 @@ class CallEventsController extends Controller
         $log->fill([
             'status'           => $data['status'],
             'ended_at'         => $data['ended_at'] ?? now(),
-            'duration_seconds' => $data['duration_seconds'] ?? $log->duration_seconds,
         ]);
+
+        $durationSeconds = $data['duration_seconds'] ?? $log->duration_seconds;
+        if ($durationSeconds !== null) {
+            $durationSeconds = (int) $durationSeconds;
+            $log->duration_seconds = $durationSeconds;
+            $log->metered_minutes = $durationSeconds > 0 ? (int) max(1, ceil($durationSeconds / 60)) : 0;
+        }
 
         if (!empty($data['caller_name']) && empty($log->caller_name)) {
             $log->caller_name = $data['caller_name'];

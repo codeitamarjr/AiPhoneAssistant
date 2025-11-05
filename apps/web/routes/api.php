@@ -15,6 +15,7 @@ use App\Http\Controllers\{
     LeadApiController,
     ViewingStatsController,
     NotificationPreferenceApiController,
+    MeteredUsageController,
 };
 use App\Http\Controllers\{CallEventsController};
 
@@ -39,6 +40,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('/viewings/stats', [ViewingStatsController::class, 'index']);
     Route::get('/notification-preferences', [\App\Http\Controllers\NotificationPreferenceApiController::class, 'index']);
     Route::put('/notification-preferences', [\App\Http\Controllers\NotificationPreferenceApiController::class, 'update']);
+    Route::get('/usage', [MeteredUsageController::class, 'index']);
 });
 
 // Public/tenant APIs (example) — protect with your API token middleware

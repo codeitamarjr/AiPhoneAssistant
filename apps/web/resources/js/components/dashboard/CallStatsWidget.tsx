@@ -13,6 +13,7 @@ type CallStatsResponse = {
         total: number;
         completed: number;
         duration_seconds: number;
+        metered_minutes?: number;
     };
 };
 
@@ -65,9 +66,13 @@ export default function CallStatsWidget({ className, period }: CallStatsWidgetPr
     const totalCalls = stats?.calls.total ?? 0;
     const completedCalls = stats?.calls.completed ?? 0;
     const totalMinutes = useMemo(() => {
-        const seconds = stats?.calls.duration_seconds ?? 0;
-        if (seconds <= 0) return 0;
-        return Math.round(seconds / 60);
+        if (!stats) return 0;
+        if (typeof stats.calls.metered_minutes === 'number') {
+            return stats.calls.metered_minutes;
+        }
+        const secondsFallback = stats.calls.duration_seconds ?? 0;
+        if (secondsFallback <= 0) return 0;
+        return Math.round(secondsFallback / 60);
     }, [stats]);
 
     const completionRate = useMemo(() => {
@@ -110,7 +115,7 @@ export default function CallStatsWidget({ className, period }: CallStatsWidgetPr
                 <section className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-lg border border-neutral-200/70 px-3 py-2 dark:border-neutral-800/70">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                            Minutes handled
+                            Metered minutes
                         </p>
                         <p className="mt-1 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                             {loading ? '—' : `${minutesDisplay} min`}

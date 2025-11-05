@@ -28,6 +28,7 @@ class CallLogApiController extends Controller
         $totalCalls = (clone $scoped)->count();
         $completedCalls = (clone $scoped)->where('status', 'completed')->count();
         $totalDurationSeconds = (int) ((clone $scoped)->sum('duration_seconds') ?? 0);
+        $totalMeteredMinutes = (int) ((clone $scoped)->sum('metered_minutes') ?? 0);
 
         return response()->json([
             'period' => [
@@ -39,6 +40,7 @@ class CallLogApiController extends Controller
                 'total' => $totalCalls,
                 'completed' => $completedCalls,
                 'duration_seconds' => $totalDurationSeconds,
+                'metered_minutes' => $totalMeteredMinutes,
             ],
         ]);
     }
@@ -93,6 +95,7 @@ class CallLogApiController extends Controller
                     'started_at'       => optional($c->started_at)->toISOString(),
                     'ended_at'         => optional($c->ended_at)->toISOString(),
                     'duration_seconds' => $c->duration_seconds,
+                    'metered_minutes'  => $c->metered_minutes,
                     'twilio_call_sid'  => $c->twilio_call_sid,
                 ];
             }),

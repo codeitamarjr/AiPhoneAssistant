@@ -24,6 +24,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('onboarding');
     Route::get('/support/user-manual', fn () => Inertia::render('Support/UserManual'))
         ->name('support.user-manual');
+    Route::get('/usage', [\App\Http\Controllers\UsageWebController::class, 'index'])
+        ->name('usage.index');
     Route::get('/calls', [\App\Http\Controllers\CallLogWebController::class, 'index'])->name('calls.index');
 
     Route::get('/listings',               [\App\Http\Controllers\ListingWebController::class, 'index'])->name('listings.index');

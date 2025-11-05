@@ -13,7 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, CalendarClock, LayoutGrid } from 'lucide-react';
+import { BookOpen, CalendarClock, LayoutGrid, Timer } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -21,6 +21,11 @@ const mainNavItems: NavItem[] = [
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+    {
+        title: 'Usage',
+        href: '/usage',
+        icon: Timer,
     },
     {
         title: 'Appointments',

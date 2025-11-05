@@ -24,6 +24,7 @@ class CallLogWebController extends Controller
                 'status' => $c->status,
                 'started_at' => optional($c->started_at)->toIso8601String(),
                 'duration' => $c->duration_seconds,
+                'metered_minutes' => $c->metered_minutes,
             ]);
 
         return Inertia::render('Calls/Index', ['calls' => $calls]);

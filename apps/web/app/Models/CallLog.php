@@ -16,12 +16,14 @@ class CallLog extends Model
         'started_at',
         'ended_at',
         'duration_seconds',
+        'metered_minutes',
         'meta'
     ];
     protected $casts = [
         'started_at' => 'datetime',
         'ended_at'   => 'datetime',
         'meta'       => 'array',
+        'metered_minutes' => 'integer',
     ];
 
     public function group()

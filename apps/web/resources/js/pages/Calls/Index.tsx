@@ -14,6 +14,7 @@ export default function CallsIndex({ calls }: { calls: any }) {
               <th className="px-3 py-2 text-left">To</th>
               <th className="px-3 py-2 text-left">Status</th>
               <th className="px-3 py-2 text-right">Duration</th>
+              <th className="px-3 py-2 text-right">Metered (min)</th>
             </tr>
           </thead>
           <tbody>
@@ -25,6 +26,7 @@ export default function CallsIndex({ calls }: { calls: any }) {
                 <td className="px-3 py-2">{c.to}</td>
                 <td className="px-3 py-2">{c.status}</td>
                 <td className="px-3 py-2 text-right">{c.duration ? `${c.duration}s` : '-'}</td>
+                <td className="px-3 py-2 text-right">{typeof c.metered_minutes === 'number' && c.metered_minutes > 0 ? `${c.metered_minutes}m` : '-'}</td>
               </tr>
             ))}
           </tbody>

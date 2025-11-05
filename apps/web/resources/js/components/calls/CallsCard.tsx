@@ -11,6 +11,7 @@ type CallRow = {
   started_at: string | null;
   ended_at: string | null;
   duration_seconds: number | null;
+  metered_minutes: number | null;
   twilio_call_sid: string;
 };
 
@@ -184,6 +185,7 @@ export default function CallsCard() {
                 <Th label="To" active={sort === 'to'} order={order} onClick={() => onHeaderClick('to')} />
                 <Th label="Status" active={sort === 'status'} order={order} onClick={() => onHeaderClick('status')} />
                 <Th label="Duration" active={sort === 'duration_seconds'} order={order} onClick={() => onHeaderClick('duration_seconds')} />
+                <th className="px-6 py-2 text-right">Metered (min)</th>
                 <th className="hidden px-6 py-2 md:table-cell">SID</th>
               </tr>
             </thead>
@@ -203,13 +205,16 @@ export default function CallsCard() {
                     </span>
                   </td>
                   <td className="px-6 py-2">{formatDuration(r.duration_seconds)}</td>
+                  <td className="px-6 py-2 text-right">
+                    {typeof r.metered_minutes === 'number' && r.metered_minutes > 0 ? `${r.metered_minutes}m` : '—'}
+                  </td>
                   <td className="hidden px-6 py-2 text-[11px] text-neutral-500 dark:text-neutral-400 md:table-cell">{r.twilio_call_sid}</td>
                 </tr>
               ))}
 
               {!rows.length && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-neutral-500 dark:text-neutral-400">
+                  <td colSpan={8} className="px-6 py-10 text-center text-neutral-500 dark:text-neutral-400">
                     {loading ? 'Loading…' : 'No calls yet'}
                   </td>
                 </tr>

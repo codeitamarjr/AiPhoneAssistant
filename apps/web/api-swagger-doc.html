@@ -124,9 +124,18 @@ const spec = {
       "get": {
         "tags": ["Sanctum v1"],
         "summary": "Call Stats (Month-to-date)",
-        "description": "Returns month-to-date totals, completed calls, and minutes handled for the authenticated group.",
+        "description": "Returns month-to-date totals, completed calls, and metered minutes handled for the authenticated group.",
         "security": [{"SanctumAuth": []}],
-        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"period": {"type": "object","properties": {"label": {"type": "string"},"start": {"type": "string"},"end": {"type": "string"}}},"calls": {"type": "object","properties": {"total": {"type": "integer"},"completed": {"type": "integer"},"duration_seconds": {"type": "integer"}}}}}}}}}
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"period": {"type": "object","properties": {"label": {"type": "string"},"start": {"type": "string"},"end": {"type": "string"}}},"calls": {"type": "object","properties": {"total": {"type": "integer"},"completed": {"type": "integer"},"duration_seconds": {"type": "integer"},"metered_minutes": {"type": "integer"}}}}}}}}}
+      }
+    },
+    "/v1/usage": {
+      "get": {
+        "tags": ["Sanctum v1"],
+        "summary": "Metered Usage (Minutes)",
+        "description": "Aggregated metered call minutes for the authenticated group within a reporting window.",
+        "security": [{"SanctumAuth": []}],
+        "responses": {"200": {"description": "OK","content": {"application/json": {"schema": {"type": "object","properties": {"period": {"type": "object","properties": {"label": {"type": "string"},"start": {"type": "string"},"end": {"type": "string"}}},"summary": {"type": "object","properties": {"calls": {"type": "integer"},"completed": {"type": "integer"},"duration_seconds": {"type": "integer"},"metered_minutes": {"type": "integer"},"average_metered_minutes_per_call": {"type": "number"}}},"breakdown": {"type": "array","items": {"type": "object","properties": {"date": {"type": "string"},"calls": {"type": "integer"},"duration_seconds": {"type": "integer"},"metered_minutes": {"type": "integer"},"running_metered_minutes": {"type": "integer"}}}}}}}}}}
       }
     },
     "/v1/listings/active": {
