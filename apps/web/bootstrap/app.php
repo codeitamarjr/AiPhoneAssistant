@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->validateCsrfTokens(except: [
+            'twilio/authorize',
+            'twilio/deauthorize',
+        ]);
 
         $middleware->web(append: [
             HandleAppearance::class,

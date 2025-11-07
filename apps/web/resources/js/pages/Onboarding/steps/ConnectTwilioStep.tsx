@@ -1,125 +1,132 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import InputError from '@/components/input-error';
 
 type Props = {
     group: { id: number; name?: string };
     onDone: () => void;
 };
 
+type ConnectUrlResponse = {
+    url: string;
+    expires_at: string;
+};
+
+const TWILIO_ICON =
+    'data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MCA2MCI+PGRlZnM+PHN0eWxlPi5jbHMtMXtmaWxsOiNmZmY7fTwvc3R5bGU+PC9kZWZzPgoJPHRpdGxlPnR3aWxpby1sb2dvbWFyay13aGl0ZUFydGJvYXJkIDE8L3RpdGxlPgoJPHBhdGggY2xhc3M9ImNscy0xIiBkPSJNMzAsMTVBMTUsMTUsMCwxLDAsNDUsMzAsMTUsMTUsMCwwLDAsMzAsMTVabTAsMjZBMTEsMTEsMCwxLDEsNDEsMzAsMTEsMTEsMCwwLDEsMzAsNDFabTYuOC0xNC43YTMuMSwzLjEsMCwxLDEtMy4xLTMuMUEzLjEyLDMuMTIsMCwwLDEsMzYuOCwyNi4zWm0wLDcuNGEzLjEsMy4xLDAsMSwxLTMuMS0zLjFBMy4xMiwzLjEyLDAsMCwxLDM2LjgsMzMuN1ptLTcuNCwwYTMuMSwzLjEsMCwxLDEtMy4xLTMuMUEzLjEyLDMuMTIsMCwwLDEsMjkuNCwzMy43Wm0wLTcuNGEzLjEsMy4xLDAsMSwxLTMuMS0zLjFBMy4xMiwzLjEyLDAsMCwxLDI5LjQsMjYuM1oiLz4KPC9zdmc+';
+
 export default function ConnectTwilioStep({ group, onDone }: Props) {
-    const [form, setForm] = useState({
-        account_sid: '',
-        auth_token: '',
-        incoming_phone_e164: '',
-    });
-    const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-    const [saving, setSaving] = useState(false);
+    const [connectUrl, setConnectUrl] = useState<string | null>(null);
+    const [loadingLink, setLoadingLink] = useState(false);
+    const [linkError, setLinkError] = useState<string | null>(null);
+    const [checking, setChecking] = useState(false);
+    const isLinkDisabled = loadingLink || !connectUrl;
 
-    const handleChange = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => {
-        setForm((prev) => ({ ...prev, [field]: event.target.value }));
-    };
-
-    const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setSaving(true);
-        setErrors({});
+    const fetchConnectUrl = useCallback(async () => {
+        setLoadingLink(true);
+        setLinkError(null);
 
         try {
-            await axios.post(`/api/v1/groups/${group.id}/twilio`, form);
-            toast.success('Twilio connected');
-            onDone();
+            const { data } = await axios.post<ConnectUrlResponse>(`/api/v1/groups/${group.id}/twilio/connect-url`);
+            setConnectUrl(data.url);
         } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status === 422) {
-                const validationErrors = error.response?.data?.errors ?? {};
-                const formatted: Record<string, string | undefined> = {};
-                Object.entries(validationErrors).forEach(([key, messages]) => {
-                    formatted[key] = Array.isArray(messages) ? messages[0] : messages;
-                });
-                setErrors(formatted);
-                toast.error('Please check the highlighted fields.');
+            setConnectUrl(null);
+
+            if (axios.isAxiosError(error) && error.response?.data?.message) {
+                setLinkError(error.response.data.message);
             } else {
-                toast.error('Unable to connect Twilio right now.');
+                setLinkError('Unable to prepare the Twilio Connect link right now.');
             }
         } finally {
-            setSaving(false);
+            setLoadingLink(false);
         }
-    };
+    }, [group.id]);
+
+    useEffect(() => {
+        fetchConnectUrl();
+    }, [fetchConnectUrl]);
+
+    const checkStatus = useCallback(async () => {
+        setChecking(true);
+
+        try {
+            const { data } = await axios.get(`/api/v1/groups/${group.id}/twilio`);
+
+            if (data) {
+                toast.success('Twilio account connected');
+                onDone();
+            } else {
+                toast.info('Still waiting on Twilio. Finish the authorization and try again.');
+            }
+        } catch (error) {
+            toast.error('Unable to check the Twilio connection right now.');
+        } finally {
+            setChecking(false);
+        }
+    }, [group.id, onDone]);
 
     return (
         <Card className="border-sidebar-border/60">
             <CardHeader>
                 <CardTitle>Connect Twilio</CardTitle>
                 <CardDescription>
-                    Paste your Twilio credentials to let AI Phone Assistant route calls and capture leads for the “{group.name || 'workspace'}” workspace.
+                    Use Twilio Connect to securely link your account so AI Phone Assistant can purchase numbers and configure webhooks for the “{group.name || 'workspace'}” workspace.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
-                <form onSubmit={submit} className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="account_sid">Account SID</Label>
-                        <Input
-                            id="account_sid"
-                            placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                            value={form.account_sid}
-                            onChange={handleChange('account_sid')}
-                            autoComplete="off"
-                            required
-                        />
-                        <InputError message={errors.account_sid} />
-                    </div>
+            <CardContent className="space-y-6">
+                <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Click the button below to open the Twilio Connect approval flow. Once approved, we receive a scoped subaccount SID so we can provision numbers and manage voice webhooks for you.
+                    </p>
+                    {linkError ? (
+                        <div className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+                            <p className="text-sm text-destructive">{linkError}</p>
+                            <Button variant="destructive" onClick={fetchConnectUrl} disabled={loadingLink} className="w-full sm:w-auto">
+                                {loadingLink ? 'Preparing…' : 'Try again'}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <a
+                                href={connectUrl ?? '#'}
+                                className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#F22F46] px-4 text-sm font-semibold text-white transition hover:bg-[#d71939] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F22F46] sm:w-auto ${isLinkDisabled ? 'cursor-not-allowed opacity-70' : ''}`}
+                                aria-disabled={isLinkDisabled}
+                                onClick={(event) => {
+                                    if (isLinkDisabled) {
+                                        event.preventDefault();
+                                    }
+                                }}
+                            >
+                                <span className="flex items-center justify-center">
+                                    <img src={TWILIO_ICON} alt="Twilio" className="h-5 w-5" />
+                                </span>
+                                {loadingLink ? 'Preparing…' : 'Connect with Twilio'}
+                            </a>
+                            <Button variant="ghost" onClick={fetchConnectUrl} disabled={loadingLink} className="justify-start px-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground sm:w-auto sm:px-3">
+                                Need a fresh link?
+                            </Button>
+                        </div>
+                    )}
+                </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="auth_token">Auth token</Label>
-                        <Input
-                            id="auth_token"
-                            placeholder="Paste your Twilio auth token"
-                            value={form.auth_token}
-                            onChange={handleChange('auth_token')}
-                            type="password"
-                            autoComplete="new-password"
-                            required
-                        />
-                        <InputError message={errors.auth_token} />
-                        <p className="text-xs text-muted-foreground">
-                            Your auth token is encrypted as soon as it reaches our servers. You can rotate it anytime from Settings → Twilio & Calls.
-                        </p>
-                    </div>
+                <Separator />
 
-                    <div className="space-y-2">
-                        <Label htmlFor="incoming_phone_e164">Workspace phone number (optional)</Label>
-                        <Input
-                            id="incoming_phone_e164"
-                            placeholder="+15551234567"
-                            value={form.incoming_phone_e164}
-                            onChange={handleChange('incoming_phone_e164')}
-                            autoComplete="tel"
-                        />
-                        <InputError message={errors.incoming_phone_e164} />
-                    </div>
+                <div className="space-y-3">
+                    <p className="text-sm font-medium text-foreground">What to expect</p>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                        <li>Twilio may ask you to sign in and confirm the AI Phone Assistant Connect App permissions.</li>
+                        <li>We automatically save the returned Account SID for this workspace.</li>
+                        <li>Once connected, we can buy phone numbers on your behalf and configure the necessary voice webhooks.</li>
+                    </ul>
+                </div>
 
-                    <Separator />
-
-                    <div className="space-y-3">
-                        <p className="text-sm font-medium text-foreground">Before you continue</p>
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                            <li>Log in to Twilio Console and copy your primary Account SID and Auth Token.</li>
-                            <li>Choose the incoming number you want AI Phone Assistant to answer and paste it above.</li>
-                            <li>After saving, we’ll guide you through setting webhook URLs for voice and status callbacks.</li>
-                        </ul>
-                    </div>
-
-                    <Button type="submit" className="w-full" disabled={saving}>
-                        {saving ? 'Connecting…' : 'Save & continue'}
-                    </Button>
-                </form>
+                <Button type="button" className="w-full sm:w-auto" onClick={checkStatus} disabled={checking}>
+                    {checking ? 'Checking connection…' : 'I’ve connected Twilio'}
+                </Button>
             </CardContent>
         </Card>
     );

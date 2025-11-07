@@ -35,6 +35,16 @@ return [
         ],
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+    ],
+
+    'twilio_connect' => [
+        'app_sid' => env('TWILIO_CONNECT_APP_SID'),
+        'authorize_base' => env('TWILIO_CONNECT_AUTHORIZE_BASE', 'https://www.twilio.com/authorize'),
+    ],
+
     'orchestrator' => [
         'token' => env('ORCHESTRATOR_TOKEN'),
     ],

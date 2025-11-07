@@ -1,11 +1,23 @@
 <?php
 
+use App\Http\Controllers\TwilioConnectController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
+
+Route::match(['GET', 'POST'], '/twilio/authorize', [TwilioConnectController::class, 'handleAuthorize'])
+    ->name('twilio.authorize');
+Route::match(['GET', 'POST'], '/twilio/deauthorize', [TwilioConnectController::class, 'deauthorize'])
+    ->name('twilio.deauthorize');
+
+// Temporary backwards-compatible aliases for legacy Connect callbacks
+Route::match(['GET', 'POST'], '/twillio/authorize', [TwilioConnectController::class, 'handleAuthorize'])
+    ->name('twillio.authorize');
+Route::match(['GET', 'POST'], '/twillio/deauthorize', [TwilioConnectController::class, 'deauthorize'])
+    ->name('twillio.deauthorize');
 
 Route::get('/user-manual', fn () => Inertia::render('Support/UserManualPublic'))
     ->name('manual.public');

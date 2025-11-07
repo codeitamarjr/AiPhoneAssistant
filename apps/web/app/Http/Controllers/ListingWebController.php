@@ -113,8 +113,9 @@ class ListingWebController extends Controller
 
         if ($phoneNumbers->isEmpty()) {
             $cred = optional(Group::find($groupId))->twilioCredential;
-            if ($cred && $cred->account_sid && $cred->authToken()) {
-                $sync->syncForGroup($groupId, $user->id, $cred->account_sid, $cred->authToken());
+            $masterAuthToken = config('services.twilio.auth_token');
+            if ($cred && $cred->account_sid && $masterAuthToken) {
+                $sync->syncForGroup($groupId, $user->id, $cred->account_sid, $masterAuthToken);
 
                 // 3) Re-load after sync
                 $phoneNumbers = PhoneNumber::where('group_id', $groupId)

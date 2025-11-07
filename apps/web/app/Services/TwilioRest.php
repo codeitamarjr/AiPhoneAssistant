@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use App\Models\TwilioCredential;
+use Illuminate\Support\Facades\Http;
+use RuntimeException;
 
 class TwilioRest
 {
@@ -11,8 +12,23 @@ class TwilioRest
 
     protected function client()
     {
-        return Http::withBasicAuth($this->cred->account_sid, $this->cred->authToken())
+        if (! $this->cred->account_sid) {
+            throw new RuntimeException('Missing connected Twilio Account SID.');
+        }
+
+        return Http::withBasicAuth($this->cred->account_sid, $this->authToken())
             ->baseUrl('https://api.twilio.com/2010-04-01');
+    }
+
+    protected function authToken(): string
+    {
+        $token = config('services.twilio.auth_token');
+
+        if (! $token) {
+            throw new RuntimeException('Missing Twilio auth token configuration.');
+        }
+
+        return $token;
     }
 
     public function incomingNumbers()

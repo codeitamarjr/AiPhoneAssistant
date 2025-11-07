@@ -68,8 +68,8 @@ const gettingStartedSteps: Array<{ id: string; title: string; steps: string[] }>
         id: 'twilio',
         title: 'Connect Twilio',
         steps: [
-            'Have your Twilio Account SID, Auth Token, and the E.164 phone number the assistant should answer (for example +15551234567).',
-            'Paste the values into the wizard. Optional fields (phone SID, subaccount SID) can be added later in Settings > Twilio & Calls.',
+            'Use the onboarding wizard to launch Twilio Connect and approve access for AI Phone Assistant.',
+            'We store the Account SID Twilio returns. Optional fields (phone SID, workspace number) can be added later in Settings > Twilio & Calls.',
             'After saving, follow the in-app link to set the voice and status callback URLs inside the Twilio Console.',
         ],
     },
@@ -195,7 +195,7 @@ const settingsSections: Array<{ title: string; items: string[] }> = [
         title: 'Twilio & Calls',
         items: [
             'Settings > Twilio & Calls shows connection status, timestamps, and configured numbers.',
-            'Use Connect/Edit Twilio to update the Account SID, Auth Token, workspace number, phone SID, or subaccount SID. Tokens are never shown after saving.',
+            'Use Connect/Edit Twilio to update the Account SID, workspace number, phone SID, or subaccount SID. Twilio auth tokens stay in your main account and are never stored here.',
             'You can disconnect Twilio or reopen the modal from the same page. Field errors display inline and via toast notifications.',
         ],
     },

@@ -9,7 +9,16 @@ class OnboardingController extends Controller
     public function status(Request $request)
     {
         $user = $request->user();
-        $group = $user->memberships()->with('group.twilioCredential')->first()?->group;
+        $group = $user->currentGroup;
+
+        if ($group) {
+            $group->loadMissing('twilioCredential');
+        } else {
+            $group = $user->memberships()->with('group.twilioCredential')->first()?->group;
+            if ($group) {
+                $user->setCurrentGroupId($group->id);
+            }
+        }
 
         return response()->json([
             'has_group'  => (bool) $group,

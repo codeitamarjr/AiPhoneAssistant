@@ -53,7 +53,6 @@ type PageProps = SharedData & {
 
 const initialForm = (credential?: Credential | null) => ({
     account_sid: credential?.account_sid ?? '',
-    auth_token: '',
     incoming_phone_e164: credential?.incoming_phone_e164 ?? '',
     incoming_phone_sid: credential?.incoming_phone_sid ?? '',
     subaccount_sid: credential?.subaccount_sid ?? '',
@@ -102,7 +101,6 @@ export default function TwilioSettings() {
             } else {
                 toast.success('Twilio connection saved');
             }
-            setForm((prev) => ({ ...prev, auth_token: '' }));
             setIsModalOpen(false);
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status === 422) {
@@ -155,7 +153,7 @@ export default function TwilioSettings() {
                             <CardHeader>
                                 <CardTitle>Connection status</CardTitle>
                                 <CardDescription>
-                                    Manage your Twilio credentials. Your auth token is always encrypted at rest and never displayed after saving.
+                                    Manage the Account SID linked through Twilio Connect. We never ask customers for their Twilio auth tokens.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -223,74 +221,56 @@ export default function TwilioSettings() {
                                 <DialogTitle>{credential ? 'Update Twilio connection' : 'Connect Twilio'}</DialogTitle>
                                 <DialogDescription>
                                     {credential
-                                        ? 'Rotate tokens, edit numbers, or switch the connected account.'
-                                        : 'Paste your Twilio Account SID and Auth Token to link your workspace.'}
+                                        ? 'Update the connected Account SID or adjust the numbers saved for this workspace.'
+                                        : 'Paste the Account SID returned from Twilio Connect if you need to link it manually.'}
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-2 md:col-span-2">
                                     <Label htmlFor="account_sid">Account SID</Label>
                                     <Input
-                                            id="account_sid"
-                                            name="account_sid"
-                                            placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                                            value={form.account_sid}
-                                            onChange={handleChange('account_sid')}
-                                            autoComplete="off"
-                                            required
-                                        />
-                                        <InputError message={errors.account_sid} />
-                                    </div>
+                                        id="account_sid"
+                                        name="account_sid"
+                                        placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                                        value={form.account_sid}
+                                        onChange={handleChange('account_sid')}
+                                        autoComplete="off"
+                                        required
+                                    />
+                                    <InputError message={errors.account_sid} />
+                                </div>
 
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="auth_token">Auth token</Label>
-                                        <Input
-                                            id="auth_token"
-                                            name="auth_token"
-                                            placeholder="Paste your Twilio auth token"
-                                            value={form.auth_token}
-                                            onChange={handleChange('auth_token')}
-                                            type="password"
-                                            autoComplete="new-password"
-                                            required
-                                        />
-                                        <InputError message={errors.auth_token} />
-                                        <p className="text-xs text-muted-foreground">
-                                            Twilio only shows your auth token once. Generate a new token if you no longer have it saved.
-                                        </p>
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="incoming_phone_e164">Workspace phone number</Label>
+                                    <Input
+                                        id="incoming_phone_e164"
+                                        name="incoming_phone_e164"
+                                        placeholder="+15551234567"
+                                        value={form.incoming_phone_e164}
+                                        onChange={handleChange('incoming_phone_e164')}
+                                    />
+                                    <InputError message={errors.incoming_phone_e164} />
+                                </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="incoming_phone_e164">Workspace phone number</Label>
-                                        <Input
-                                            id="incoming_phone_e164"
-                                            name="incoming_phone_e164"
-                                            placeholder="+15551234567"
-                                            value={form.incoming_phone_e164}
-                                            onChange={handleChange('incoming_phone_e164')}
-                                        />
-                                        <InputError message={errors.incoming_phone_e164} />
-                                    </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="incoming_phone_sid">Incoming phone SID (optional)</Label>
+                                    <Input
+                                        id="incoming_phone_sid"
+                                        name="incoming_phone_sid"
+                                        placeholder="PNXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                                        value={form.incoming_phone_sid}
+                                        onChange={handleChange('incoming_phone_sid')}
+                                    />
+                                    <InputError message={errors.incoming_phone_sid} />
+                                </div>
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="incoming_phone_sid">Incoming phone SID (optional)</Label>
-                                        <Input
-                                            id="incoming_phone_sid"
-                                            name="incoming_phone_sid"
-                                            placeholder="PNXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                                            value={form.incoming_phone_sid}
-                                            onChange={handleChange('incoming_phone_sid')}
-                                        />
-                                        <InputError message={errors.incoming_phone_sid} />
-                                    </div>
-
-                                    <div className="space-y-2 md:col-span-2">
-                                        <Label htmlFor="subaccount_sid">Subaccount SID (optional)</Label>
-                                        <Input
-                                            id="subaccount_sid"
-                                            name="subaccount_sid"
-                                            placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                                            value={form.subaccount_sid}
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="subaccount_sid">Subaccount SID (optional)</Label>
+                                    <Input
+                                        id="subaccount_sid"
+                                        name="subaccount_sid"
+                                        placeholder="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                                        value={form.subaccount_sid}
                                         onChange={handleChange('subaccount_sid')}
                                     />
                                     <InputError message={errors.subaccount_sid} />

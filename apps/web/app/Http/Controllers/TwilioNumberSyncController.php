@@ -18,8 +18,12 @@ class TwilioNumberSyncController extends Controller
         $cred = optional($user->memberships()->where('group_id', $groupId)->first())->group->twilioCredential
             ?? \App\Models\TwilioCredential::where('group_id', $groupId)->first();
 
-        abort_if(!$cred || !$cred->account_sid || !$cred->authToken(), 422, 'Twilio not connected for this group.');
-        $twilio = new Client($cred->account_sid, $cred->authToken());
+        abort_if(! $cred || ! $cred->account_sid, 422, 'Twilio Connect is not configured for this workspace.');
+
+        $authToken = config('services.twilio.auth_token');
+        abort_if(empty($authToken), 422, 'Missing TWILIO_AUTH_TOKEN configuration.');
+
+        $twilio = new Client($cred->account_sid, $authToken);
 
         // Fetch all incoming numbers from Twilio
         $incoming = $twilio->incomingPhoneNumbers->read([], 100); // up to 100; paginate if you need more

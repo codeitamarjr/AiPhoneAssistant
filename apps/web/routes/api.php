@@ -5,6 +5,7 @@ use App\Http\Controllers\{
     GroupController,
     OnboardingController,
     TwilioConnectionController,
+    TwilioConnectController,
     ListingController,
     ViewingController,
     ViewingSlotController,
@@ -23,6 +24,7 @@ use App\Http\Controllers\{CallEventsController};
 Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::post('/groups', [GroupController::class, 'store']);
     Route::get('/onboarding/status', [OnboardingController::class, 'status']);
+    Route::post('/groups/{group}/twilio/connect-url', [TwilioConnectController::class, 'connectUrl']);
     Route::post('/groups/{group}/twilio', [TwilioConnectionController::class, 'store']);
     Route::put('/groups/{group}/twilio', [TwilioConnectionController::class, 'store']);
     Route::get('/groups/{group}/twilio', [TwilioConnectionController::class, 'show']);

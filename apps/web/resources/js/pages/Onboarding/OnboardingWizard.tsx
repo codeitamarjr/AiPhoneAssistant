@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +38,25 @@ const STEPS = [
     },
 ] as const;
 
+const describeTwilioError = (code?: string | null) => {
+    switch (code) {
+        case 'invalid_signature':
+            return 'We could not verify Twilio’s response. Please try the Connect flow again.';
+        case 'invalid_state':
+            return 'The connect link looked invalid. Generate a new link and retry.';
+        case 'expired_state':
+            return 'That connect link expired. Grab a fresh link and finish the authorization.';
+        case 'group_not_found':
+            return 'We could not find that workspace while saving the Twilio credentials.';
+        case 'unauthorized':
+            return 'You do not have permissions to connect Twilio for this workspace.';
+        case 'missing_account_sid':
+            return 'Twilio did not return the Account SID. Please approve the connection again.';
+        default:
+            return 'Could not complete Twilio Connect. Please try again.';
+    }
+};
+
 export default function OnboardingWizard() {
     const [status, setStatus] = useState<OnboardingStatus | null>(null);
     const [loading, setLoading] = useState(true);
@@ -56,6 +76,24 @@ export default function OnboardingWizard() {
     };
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const twilioStatus = params.get('twilio');
+        const twilioReason = params.get('reason');
+
+        if (twilioStatus) {
+            params.delete('twilio');
+            params.delete('reason');
+            const query = params.toString();
+            const updatedUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+            window.history.replaceState(null, '', updatedUrl);
+
+            if (twilioStatus === 'connected') {
+                toast.success('Your Twilio account is now connected.');
+            } else if (twilioStatus === 'error') {
+                toast.error(describeTwilioError(twilioReason));
+            }
+        }
+
         load();
     }, []);
 
